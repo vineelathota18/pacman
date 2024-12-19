@@ -683,6 +683,7 @@ name = "pacman-yew"
 version = "0.1.0"
 dependencies = [
  "gloo 0.10.0",
+ "gloo-timers 0.3.0",
  "rand",
  "serde",
  "wasm-bindgen",
