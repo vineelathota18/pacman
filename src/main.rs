@@ -1,6 +1,9 @@
-use yew::prelude::*;
 use rand::Rng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use yew::prelude::*;
+use web_sys::KeyboardEvent;
+use gloo::events::EventListener;
+use wasm_bindgen::JsCast;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 struct Position {
@@ -41,9 +44,10 @@ fn Cell(props: &CellProps) -> Html {
 
     let content = if props.is_pacman {
         html! {
-            <div class="pacman-body">
-                <div class="pacman-eye"></div>
-            </div>
+            <>
+            <div class="pacman-body"></div>
+            <div class="pacman-eye"></div>
+            </>
         }
     } else if let Some(ghost) = &props.ghost {
         let style = format!("background-color: {};", ghost.color);
@@ -53,7 +57,7 @@ fn Cell(props: &CellProps) -> Html {
     } else {
         match props.cell_type {
             2 => html! { "." },
-            3 => html! { "o" },
+            3 => html! { "⚪" },
             _ => html! { "" },
         }
     };
@@ -67,7 +71,7 @@ fn Cell(props: &CellProps) -> Html {
 
 #[function_component]
 fn App() -> Html {
-    let maze = vec![
+    let maze = use_state(|| vec![
         vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         vec![1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1],
         vec![1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1],
@@ -88,39 +92,86 @@ fn App() -> Html {
         vec![1, 2, 2, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
         vec![1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1],
         vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    ];
+    ]);
 
-    let mut rng = rand::thread_rng();
-    let mut valid_positions: Vec<Position> = maze.iter()
-        .enumerate()
-        .flat_map(|(y, row)| {
-            row.iter().enumerate().filter_map(move |(x, &cell)| {
-                if cell != 1 {
-                    Some(Position { x, y })
-                } else {
+    let pacman_pos = use_state(|| Position { x: 1, y: 1 });
+    
+    let ghosts = use_state(|| {
+        let mut rng = rand::thread_rng();
+        let ghost_colors = vec!["#FF0000", "#00FFFF", "#FFB8FF", "#FFB852"];
+        let mut valid_positions: Vec<Position> = maze.iter()
+            .enumerate()
+            .flat_map(|(y, row)| {
+                row.iter().enumerate().filter_map(move |(x, &cell)| {
+                    if cell != 1 && !(x == 1 && y == 1) {
+                        Some(Position { x, y })
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        ghost_colors.iter()
+            .filter_map(|&color| {
+                if valid_positions.is_empty() {
                     None
+                } else {
+                    let idx = rng.gen_range(0..valid_positions.len());
+                    let position = valid_positions.remove(idx);
+                    Some(Ghost { position, color })
                 }
             })
-        })
-        .collect();
+            .collect::<Vec<_>>()
+    });
 
-    // First select Pacman's position
-    let pacman_idx = rng.gen_range(0..valid_positions.len());
-    let pacman_pos = valid_positions.remove(pacman_idx);
+    // Add keyboard event listener
+    {
+        let pacman_pos = pacman_pos.clone();
+        let maze = maze.clone();
 
-    // Then place ghosts in remaining positions
-    let ghost_colors = vec!["#FF0000", "#00FFFF", "#FFB8FF", "#FFB852"];
-    let ghosts = ghost_colors.iter()
-        .filter_map(|&color| {
-            if valid_positions.is_empty() {
-                None
-            } else {
-                let idx = rng.gen_range(0..valid_positions.len());
-                let position = valid_positions.remove(idx);
-                Some(Ghost { position, color })
-            }
-        })
-        .collect::<Vec<_>>();
+        use_effect(move || {
+            let document = web_sys::window()
+                .unwrap()
+                .document()
+                .unwrap();
+
+            let handler = move |event: &web_sys::Event| {
+                let event = event.dyn_ref::<KeyboardEvent>().unwrap();
+                let mut new_pos = (*pacman_pos).clone();
+
+                match event.key().as_str() {
+                    "ArrowUp" => {
+                        if new_pos.y > 0 && maze[new_pos.y - 1][new_pos.x] != 1 {
+                            new_pos.y -= 1;
+                        }
+                    }
+                    "ArrowDown" => {
+                        if new_pos.y < maze.len() - 1 && maze[new_pos.y + 1][new_pos.x] != 1 {
+                            new_pos.y += 1;
+                        }
+                    }
+                    "ArrowLeft" => {
+                        if new_pos.x > 0 && maze[new_pos.y][new_pos.x - 1] != 1 {
+                            new_pos.x -= 1;
+                        }
+                    }
+                    "ArrowRight" => {
+                        if new_pos.x < maze[0].len() - 1 && maze[new_pos.y][new_pos.x + 1] != 1 {
+                            new_pos.x += 1;
+                        }
+                    }
+                    _ => return,
+                }
+
+                pacman_pos.set(new_pos);
+            };
+
+            let listener = EventListener::new(&document, "keydown", handler);
+            
+            || drop(listener)
+        });
+    }
 
     let style = format!("grid-template-columns: repeat({}, 1fr);", maze[0].len());
 
@@ -147,7 +198,7 @@ fn App() -> Html {
                     }
                     .wall {
                         background-color: #00f;
-                        border: 1px solid #000;
+                        outline: 1px solid #000;
                     }
                     .empty {
                         background-color: #000;
@@ -164,11 +215,12 @@ fn App() -> Html {
                     .pacman {
                         background-color: #ffff00;
                         border-radius: 90%;
+                        position: relative;
                     }
                     .pacman-body {
                         background: #030303;
-                        width: 80%;
-                        height: 80%;
+                        width: 100%;
+                        height: 100%;
                         border-radius: 50%;
                         position: relative;
                         clip-path: polygon(100% 0, 100% 100%, 50% 50%, 100% 0);
@@ -180,8 +232,8 @@ fn App() -> Html {
                         height: 4px;
                         border-radius: 50%;
                         background: #000;
-                        top: 25%;
-                        right: 25%;
+                        top: 20%;
+                        right: 32%;
                     }
                     @keyframes eat {
                         0% { clip-path: polygon(100% 15%, 100% 85%, 50% 50%, 100% 15%); }
@@ -200,11 +252,6 @@ fn App() -> Html {
                         justify-content: center;
                         animation: float 1s ease-in-out infinite;
                     }
-                    @keyframes chomp {
-                        0% { transform: rotate(0deg); }
-                        50% { transform: rotate(45deg); }
-                        100% { transform: rotate(0deg); }
-                    }
                     @keyframes float {
                         0%, 100% { transform: translateY(0); }
                         50% { transform: translateY(-3px); }
@@ -216,15 +263,15 @@ fn App() -> Html {
                     maze.iter().enumerate().map(|(y, row)| {
                         row.iter().enumerate().map(|(x, &cell)| {
                             let is_pacman = x == pacman_pos.x && y == pacman_pos.y;
-                            let ghost = ghosts.iter()
+                            let ghost = (*ghosts).iter()
                                 .find(|g| g.position.x == x && g.position.y == y)
                                 .cloned();
-                            
+
                             html! {
-                                <Cell 
-                                    cell_type={cell} 
-                                    is_pacman={is_pacman}
-                                    ghost={ghost}
+                                <Cell
+                                    cell_type={cell}
+                                    {is_pacman}
+                                    {ghost}
                                 />
                             }
                         }).collect::<Html>()
