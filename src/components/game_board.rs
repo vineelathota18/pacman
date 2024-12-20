@@ -10,6 +10,7 @@ pub struct GameBoardProps {
     pub pacman_pos: Position,
     pub ghosts: Vec<Ghost>,
     pub is_dying: bool,
+    pub is_invincible: bool,
 }
 
 #[function_component]
@@ -17,6 +18,10 @@ pub fn GameBoard(props: &GameBoardProps) -> Html {
     let style = format!("grid-template-columns: repeat({}, 1fr);", props.maze[0].len());
 
     html! {
+        <>
+        <style>
+                {include_str!("../styles/game.css")}
+            </style>
         <div class="maze" {style}>
             {
                 props.maze.iter().enumerate().map(|(y, row)| {
@@ -32,11 +37,13 @@ pub fn GameBoard(props: &GameBoardProps) -> Html {
                                 {is_pacman}
                                 {ghost}
                                 is_dying={props.is_dying && is_pacman}
+                                is_invincible={props.is_invincible}
                             />
                         }
                     }).collect::<Html>()
                 }).collect::<Html>()
             }
         </div>
+        </>
     }
 }

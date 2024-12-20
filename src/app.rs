@@ -1,6 +1,7 @@
 use crate::components::game_board::GameBoard;
 use crate::constants::maze::INITIAL_MAZE;
 use crate::models::{Direction, Ghost, Position};
+use crate::game_logic;
 use gloo::events::EventListener;
 use gloo::timers::callback::{Interval, Timeout};
 use rand::Rng;
@@ -8,7 +9,7 @@ use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 use yew::prelude::*;
 
-fn initialize_ghosts(maze: &Vec<Vec<u8>>) -> Vec<Ghost> {
+/*fn initialize_ghosts(maze: &Vec<Vec<u8>>) -> Vec<Ghost> {
     let mut rng = rand::thread_rng();
     let ghost_colors = vec!["#FF0000", "#00FFFF", "#FFB8FF", "#FFB852"];
     let mut valid_positions: Vec<Position> = maze
@@ -37,7 +38,7 @@ fn initialize_ghosts(maze: &Vec<Vec<u8>>) -> Vec<Ghost> {
             }
         })
         .collect()
-}
+}*/
 
 #[function_component]
 pub fn App() -> Html {
@@ -50,10 +51,11 @@ pub fn App() -> Html {
     let game_over = use_state(|| false);
     let move_counter = use_state(|| 0);
     //let ghosts = use_state(|| initialize_ghosts(&maze));
+    let is_invincible = use_state(|| false); // Added: Track power pellet invincibility
     let lives = use_state(|| 3);  // Added: Start with 3 lives
     let restart_timer = use_state(|| false);  // Added: For restart delay
 
-    let initial_ghost_positions = use_state(|| initialize_ghosts(&maze));
+    let initial_ghost_positions = use_state(|| game_logic::initialize_ghosts(&maze));
     let ghosts = use_state(|| (*initial_ghost_positions).clone());
 
     let reset_positions = {
@@ -95,7 +97,8 @@ pub fn App() -> Html {
             is_dying,
             move_counter,
             lives,
-            restart_timer
+            restart_timer,
+            is_invincible,
         ) = (
             pacman_pos.clone(),
             current_direction.clone(),
@@ -105,8 +108,9 @@ pub fn App() -> Html {
             ghosts.clone(),
             is_dying.clone(),
             move_counter.clone(),
-            lives.clone(),        // Added
-            restart_timer.clone(), // Added
+            lives.clone(),
+            restart_timer.clone(),
+            is_invincible.clone(),
         );
 
         use_effect(move || {
@@ -115,33 +119,31 @@ pub fn App() -> Html {
                     return;
                 }
 
-                // Update move counter and move ghosts
                 let new_counter = *move_counter + 1;
                 move_counter.set(new_counter);
 
-                // Ghost movement logic
                 if new_counter % 2 == 0 {
                     let mut new_ghosts = (*ghosts).clone();
-                    for ghost in new_ghosts.iter_mut() {
-                        ghost.move_towards_pacman(&pacman_pos, &maze);
-                    }
+                    game_logic::move_ghosts(&mut new_ghosts, &pacman_pos, &maze);
                     ghosts.set(new_ghosts);
                 }
 
-                // Check for ghost collision
-                for ghost in (*ghosts).iter() {
-                    if ghost.position == *pacman_pos {
-                        is_dying.set(true);
-                        lives.set(*lives - 1);  // Decrease lives
-                        let reset = reset_positions.clone();
-                        Timeout::new(1000, move || {
-                            reset();
-                        }).forget();
-                        return;
+                // Check for ghost collision only if not invincible
+                if !*is_invincible {
+                    for ghost in (*ghosts).iter() {
+                        if ghost.position == *pacman_pos {
+                            is_dying.set(true);
+                            lives.set(*lives - 1);
+                            let reset = reset_positions.clone();
+                            Timeout::new(1000, move || {
+                                reset();
+                            })
+                            .forget();
+                            return;
+                        }
                     }
                 }
 
-                // Pacman movement
                 let mut new_pos = (*pacman_pos).clone();
                 let mut maze_clone = (*maze).clone();
                 let mut current_score = *score;
@@ -167,7 +169,7 @@ pub fn App() -> Html {
                         Direction::None => (),
                     }
 
-                    // Update score based on collected items
+                    // Update score and handle power pellet
                     match maze_clone[new_pos.y][new_pos.x] {
                         2 => {
                             current_score += 10;
@@ -176,6 +178,14 @@ pub fn App() -> Html {
                         3 => {
                             current_score += 50;
                             maze_clone[new_pos.y][new_pos.x] = 0;
+                            // Set invincibility when power pellet is eaten
+                            is_invincible.set(true);
+                            let is_invincible_clone = is_invincible.clone();
+                            // Remove invincibility after 3 seconds
+                            Timeout::new(5000, move || {
+                                is_invincible_clone.set(false);
+                            })
+                            .forget();
                         }
                         _ => {}
                     }
@@ -224,6 +234,7 @@ pub fn App() -> Html {
             <div class="game-info">
                 <div class="score">{"Score: "}{*score}</div>
                 <div class="lives">{"Lives: "}{*lives}</div>
+                <div class="score">{"is_invincible"}{*is_invincible}</div>
                 {
                     if *restart_timer {
                         html! {
@@ -232,6 +243,10 @@ pub fn App() -> Html {
                     } else if *game_over {
                         html! {
                             <div class="game-over">{"Game Over!"}</div>
+                        }
+                    } else if *is_invincible {
+                        html! {
+                            <div class="power-pellet">{"Power Pellet Active!"}</div>
                         }
                     } else {
                         html! {}
@@ -245,6 +260,7 @@ pub fn App() -> Html {
                 pacman_pos={(*pacman_pos).clone()}
                 ghosts={(*ghosts).clone()}
                 is_dying={*is_dying}
+                is_invincible={*is_invincible}
             />
         </>
     }

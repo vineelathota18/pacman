@@ -1,5 +1,5 @@
-use yew::prelude::*;
 use crate::models::Ghost;
+use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 pub struct CellProps {
@@ -7,6 +7,7 @@ pub struct CellProps {
     pub is_pacman: bool,
     pub ghost: Option<Ghost>,
     pub is_dying: bool,
+    pub is_invincible: bool,
 }
 
 #[function_component]
@@ -39,7 +40,12 @@ pub fn Cell(props: &CellProps) -> Html {
             </>
         }
     } else if let Some(ghost) = &props.ghost {
-        let style = format!("background-color: {};", ghost.color);
+        let ghost_color = if props.is_invincible {
+            "#808080".to_string() // Grey color for vulnerable ghosts
+        } else {
+            ghost.color.to_string()
+        };
+        let style = format!("background-color: {};", ghost_color);
         html! {
             <div class="ghost-body" {style}>{"👻"}</div>
         }
