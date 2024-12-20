@@ -1,0 +1,199 @@
+.maze-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+    margin-top: auto;
+}
+
+.score {
+    font-size: 32px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    padding: 10px 20px;
+    background-color: #000;
+    border: 2px solid #333;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-family: 'Arial', sans-serif;
+}
+
+.game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #FF0000;
+    padding: 20px 40px;
+    border-radius: 10px;
+    font-size: 48px;
+    font-weight: bold;
+    text-transform: uppercase;
+    animation: pulse 1.5s infinite;
+    z-index: 1000;
+}
+
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.maze {
+    display: grid;
+    margin: 20px auto;
+    border: 2px solid #333;
+    background-color: #000;
+    padding: 10px;
+}
+
+.cell {
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Arial', sans-serif;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.wall {
+    background-color: #00f;
+    outline: 1px solid #000;
+}
+
+.empty {
+    background-color: #000;
+}
+
+.dot {
+    background-color: #000;
+    color: #fff;
+}
+
+.power-pellet {
+    background-color: #000;
+    color: #fff;
+    font-size: 24px;
+}
+
+.pacman {
+    background-color: #ffff00;
+    border-radius: 90%;
+    position: relative;
+}
+
+.pacman-body {
+    background: #030303;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    clip-path: polygon(100% 0, 100% 100%, 50% 50%, 100% 0);
+    animation: eat 0.4s linear infinite;
+}
+
+.pacman {
+    z-index: 2;
+}
+
+.ghost {
+    z-index: 1;
+}
+
+.pacman.dying {
+    animation: die 1s ease-in-out forwards;
+}
+
+.pacman.dying .pacman-body {
+    animation: die-spin 1s ease-in-out forwards !important;
+}
+
+@keyframes die {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.5);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes die-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.pacman-eye {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #000;
+    top: 20%;
+    right: 32%;
+}
+
+@keyframes eat {
+    0% {
+        clip-path: polygon(100% 15%, 100% 85%, 50% 50%, 100% 15%);
+    }
+
+    50% {
+        clip-path: polygon(100% 50%, 100% 50%, 50% 50%, 100% 50%);
+    }
+
+    100% {
+        clip-path: polygon(100% 15%, 100% 85%, 50% 50%, 100% 15%);
+    }
+}
+
+.ghost {
+    background-color: #000;
+}
+
+.ghost-body {
+    width: 80%;
+    height: 80%;
+    border-radius: 50% 50% 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: float 1s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
