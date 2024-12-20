@@ -3,6 +3,35 @@ use gloo::timers::callback::Timeout;
 use rand::Rng;
 use yew::UseStateHandle;
 
+pub fn find_ghost_move(ghost: &Ghost, pacman_pos: &Position, maze: &[Vec<u8>], aggressive: bool) -> Option<Position> {
+    let possible_moves = get_valid_ghost_moves(&ghost.position, maze);
+    if possible_moves.is_empty() {
+        return None;
+    }
+
+    // Randomly decide between best and worst move
+    let mut rng = rand::thread_rng();
+    let make_best_move = if aggressive {
+        true
+    } else {
+        rng.gen_bool(0.7) // 70% chance to make best move
+    };
+
+    // Find the move that gets us closest to or furthest from Pacman
+    possible_moves.iter()
+        .min_by_key(|pos| {
+            let dx = pos.x as i32 - pacman_pos.x as i32;
+            let dy = pos.y as i32 - pacman_pos.y as i32;
+            let distance = dx * dx + dy * dy;
+            if make_best_move {
+                distance // Move towards Pacman
+            } else {
+                -distance // Move away from Pacman
+            }
+        })
+        .cloned()
+}
+
 /// Calculate valid moves for ghosts based on the maze layout
 pub fn get_valid_ghost_moves(position: &Position, maze: &[Vec<u8>]) -> Vec<Position> {
     let mut moves = Vec::new();
@@ -133,10 +162,20 @@ pub fn check_ghost_collision(
 
 /// Move ghosts towards Pacman
 pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]) {
+    let mut rng = rand::thread_rng();
+    
     for ghost in ghosts.iter_mut() {
-        let possible_moves = get_valid_ghost_moves(&ghost.position, maze);
-        if let Some(best_move) = find_best_move(&possible_moves, pacman_pos) {
-            ghost.position = best_move;
+        // Each ghost has a different personality
+        let aggressive = match ghost.color {
+            "#FF0000" => rng.gen_bool(0.5),                    // Red ghost: Always aggressive
+            "#00FFFF" => rng.gen_bool(0.4),      // Cyan ghost: Mostly aggressive
+            "#FFB8FF" => rng.gen_bool(0.3),      // Pink ghost: Random behavior
+            "#FFB852" => rng.gen_bool(0.1),      // Orange ghost: Mostly passive
+            _ => rng.gen_bool(0.7),              // Default: Random behavior
+        };
+
+        if let Some(new_pos) = find_ghost_move(ghost, pacman_pos, maze, aggressive) {
+            ghost.position = new_pos;
         }
     }
 }

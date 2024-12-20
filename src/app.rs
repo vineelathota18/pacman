@@ -49,7 +49,39 @@ pub fn App() -> Html {
     let current_direction = use_state(|| Direction::None);
     let game_over = use_state(|| false);
     let move_counter = use_state(|| 0);
-    let ghosts = use_state(|| initialize_ghosts(&maze));
+    //let ghosts = use_state(|| initialize_ghosts(&maze));
+    let lives = use_state(|| 3);  // Added: Start with 3 lives
+    let restart_timer = use_state(|| false);  // Added: For restart delay
+
+    let initial_ghost_positions = use_state(|| initialize_ghosts(&maze));
+    let ghosts = use_state(|| (*initial_ghost_positions).clone());
+
+    let reset_positions = {
+        let pacman_pos = pacman_pos.clone();
+        let ghosts = ghosts.clone();
+        let initial_ghost_positions = initial_ghost_positions.clone();
+        let is_dying = is_dying.clone();
+        let current_direction = current_direction.clone();
+        let restart_timer = restart_timer.clone();
+        let lives = lives.clone();
+        let game_over = game_over.clone();
+
+        move || {
+            if *lives > 1 {
+                restart_timer.set(true);
+                let timer_handle = Timeout::new(3000, move || {
+                    pacman_pos.set(Position { x: 1, y: 1 });
+                    ghosts.set((*initial_ghost_positions).clone());
+                    is_dying.set(false);
+                    current_direction.set(Direction::None);
+                    restart_timer.set(false);
+                });
+                timer_handle.forget();
+            } else {
+                game_over.set(true);
+            }
+        }
+    };
 
     // Game loop effect
     {
@@ -62,6 +94,8 @@ pub fn App() -> Html {
             ghosts,
             is_dying,
             move_counter,
+            lives,
+            restart_timer
         ) = (
             pacman_pos.clone(),
             current_direction.clone(),
@@ -71,11 +105,13 @@ pub fn App() -> Html {
             ghosts.clone(),
             is_dying.clone(),
             move_counter.clone(),
+            lives.clone(),        // Added
+            restart_timer.clone(), // Added
         );
 
         use_effect(move || {
             let interval = Interval::new(150, move || {
-                if *game_over || *is_dying {
+                if *game_over || *is_dying || *restart_timer {
                     return;
                 }
 
@@ -96,11 +132,11 @@ pub fn App() -> Html {
                 for ghost in (*ghosts).iter() {
                     if ghost.position == *pacman_pos {
                         is_dying.set(true);
-                        let game_over_clone = game_over.clone();
+                        lives.set(*lives - 1);  // Decrease lives
+                        let reset = reset_positions.clone();
                         Timeout::new(1000, move || {
-                            game_over_clone.set(true);
-                        })
-                        .forget();
+                            reset();
+                        }).forget();
                         return;
                     }
                 }
@@ -181,15 +217,35 @@ pub fn App() -> Html {
         });
     }
 
+    let style = format!("grid-template-columns: repeat({}, 1fr);", maze[0].len());
     // Render game board
     html! {
-        <GameBoard
-            score={*score}
-            game_over={*game_over}
-            maze={(*maze).clone()}
-            pacman_pos={(*pacman_pos).clone()}
-            ghosts={(*ghosts).clone()}
-            is_dying={*is_dying}
-        />
+        <>
+            <div class="game-info">
+                <div class="score">{"Score: "}{*score}</div>
+                <div class="lives">{"Lives: "}{*lives}</div>
+                {
+                    if *restart_timer {
+                        html! {
+                            <div class="message">{"Get Ready!"}</div>
+                        }
+                    } else if *game_over {
+                        html! {
+                            <div class="game-over">{"Game Over!"}</div>
+                        }
+                    } else {
+                        html! {}
+                    }
+                }
+            </div>
+            <GameBoard
+                score={*score}
+                game_over={*game_over}
+                maze={(*maze).clone()}
+                pacman_pos={(*pacman_pos).clone()}
+                ghosts={(*ghosts).clone()}
+                is_dying={*is_dying}
+            />
+        </>
     }
 }

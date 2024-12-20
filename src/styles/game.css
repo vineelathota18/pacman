@@ -70,8 +70,9 @@
 }
 
 .wall {
-    background-color: #00f;
-    outline: 1px solid #000;
+    background: linear-gradient(45deg, #00f, #7889e8);
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+    border-radius: 4px;
 }
 
 .empty {
@@ -156,6 +157,48 @@
     background: #000;
     top: 20%;
     right: 32%;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.lives {
+    color: #FFB852;
+}
+
+.message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    color: yellow;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    color: red;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
 }
 
 @keyframes eat {
