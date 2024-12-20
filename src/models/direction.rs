@@ -1,4 +1,4 @@
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Direction {
     Up,
     Down,

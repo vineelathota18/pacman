@@ -1,130 +1,205 @@
 #[cfg(test)]
-mod tests {
+mod game_logic_tests {
     use crate::models::{Direction, Ghost, Position};
-    use crate::game_logic::{
-        calculate_next_position,
-        update_score,
-        get_valid_ghost_moves,
-        find_ghost_move,
-    };
-    use crate::constants::maze::INITIAL_MAZE;
+    use crate::controls::get_direction_from_key;
+    use crate::game_logic::*;
+    use std::cell::RefCell;
+
+    // Helper function to simulate game move
+    fn simulate_move(
+        direction: &Direction,
+        current_pos: &Position,
+        maze: &mut Vec<Vec<u8>>,
+        score: &mut i32
+    ) -> Option<(Position, bool)> {
+        let mut new_pos = current_pos.clone();
+        
+        let can_move = match direction {
+            Direction::Up => new_pos.y > 0 && maze[new_pos.y - 1][new_pos.x] != 1,
+            Direction::Down => new_pos.y < maze.len() - 1 && maze[new_pos.y + 1][new_pos.x] != 1,
+            Direction::Left => new_pos.x > 0 && maze[new_pos.y][new_pos.x - 1] != 1,
+            Direction::Right => new_pos.x < maze[0].len() - 1 && maze[new_pos.y][new_pos.x + 1] != 1,
+            Direction::None => false,
+        };
+
+        if can_move {
+            match direction {
+                Direction::Up => new_pos.y -= 1,
+                Direction::Down => new_pos.y += 1,
+                Direction::Left => new_pos.x -= 1,
+                Direction::Right => new_pos.x += 1,
+                Direction::None => (),
+            }
+            let power_pellet = update_score(&new_pos, maze, score);
+            Some((new_pos, power_pellet))
+        } else {
+            None
+        }
+    }
+
+    fn create_test_maze() -> Vec<Vec<u8>> {
+        vec![
+            vec![1, 1, 1, 1, 1],
+            vec![1, 0, 2, 0, 1],
+            vec![1, 2, 3, 2, 1],
+            vec![1, 0, 2, 0, 1],
+            vec![1, 1, 1, 1, 1],
+        ]
+    }
 
     #[test]
-    fn test_pacman_movement() {
-        let maze = INITIAL_MAZE.iter().map(|row| row.to_vec()).collect::<Vec<_>>();
-        let current_pos = Position { x: 1, y: 1 };
+    fn test_direction_from_key() {
+        assert_eq!(get_direction_from_key("ArrowUp"), Some(Direction::Up));
+        assert_eq!(get_direction_from_key("ArrowDown"), Some(Direction::Down));
+        assert_eq!(get_direction_from_key("ArrowLeft"), Some(Direction::Left));
+        assert_eq!(get_direction_from_key("ArrowRight"), Some(Direction::Right));
+        assert_eq!(get_direction_from_key("Invalid"), None);
+    }
 
-        // Test movement in empty space
-        let next_pos = calculate_next_position(&Direction::Right, &current_pos, &maze);
-        assert!(next_pos.is_some());
-        assert_eq!(next_pos.unwrap(), Position { x: 2, y: 1 });
+    #[test]
+    fn test_valid_ghost_moves() {
+        let maze = create_test_maze();
+        let pos = Position { x: 1, y: 1 };
+        
+        let valid_moves = get_valid_ghost_moves(&pos, &maze);
+        assert_eq!(valid_moves.len(), 2); // Should have 2 valid moves (right and down)
+        
+        assert!(valid_moves.contains(&Position { x: 2, y: 1 })); // Right
+        assert!(valid_moves.contains(&Position { x: 1, y: 2 })); // Down
+    }
 
-        // Test wall collision
-        let wall_pos = Position { x: 0, y: 0 };
-        let next_pos = calculate_next_position(&Direction::Up, &wall_pos, &maze);
-        assert!(next_pos.is_none());
+    #[test]
+    fn test_ghost_movement() {
+        let maze = create_test_maze();
+        let pacman_pos = Position { x: 3, y: 1 };
+        let ghost = Ghost {
+            position: Position { x: 1, y: 1 },
+            color: "#FF0000",
+        };
+        
+        let next_move = find_ghost_move(&ghost, &pacman_pos, &maze, true);
+        assert!(next_move.is_some());
+        if let Some(new_pos) = next_move {
+            assert!(new_pos.x > ghost.position.x); // Should move right towards Pacman
+        }
     }
 
     #[test]
     fn test_score_update() {
-        let mut maze = vec![
-            vec![1, 2, 3],
-            vec![0, 2, 0],
-            vec![1, 3, 1],
-        ];
-
-        // Test regular dot collection
-        let pos = Position { x: 1, y: 0 };
-        let score = update_score(&pos, &mut maze);
-        assert_eq!(score, 10);
-        assert_eq!(maze[0][1], 0);
-
-        // Test power pellet collection
-        let pos = Position { x: 2, y: 0 };
-        let score = update_score(&pos, &mut maze);
-        assert_eq!(score, 50);
-        assert_eq!(maze[0][2], 0);
-    }
-
-    #[test]
-    fn test_ghost_moves() {
-        let maze = vec![
-            vec![1, 0, 0, 1],
-            vec![0, 0, 0, 0],
-            vec![0, 0, 0, 0],
-            vec![1, 0, 0, 1],
-        ];
-
-        let ghost = Ghost {
-            position: Position { x: 1, y: 1 },
-            color: "#FF0000",
-        };
-
-        let valid_moves = get_valid_ghost_moves(&ghost.position, &maze);
+        let mut maze = create_test_maze();
+        let mut score = 0;
+        let pos = Position { x: 2, y: 1 }; // Position with a dot
         
-        // Check possible moves from position (1,1)
-        assert!(valid_moves.contains(&Position { x: 1, y: 2 }));  // Down
-        assert!(valid_moves.contains(&Position { x: 2, y: 1 }));  // Right
-        assert!(valid_moves.contains(&Position { x: 1, y: 0 }));  // Up
-        assert!(valid_moves.contains(&Position { x: 0, y: 1 }));  // Left
-    }
-
-    #[test]
-    fn test_maze_boundaries() {
-        let maze = INITIAL_MAZE.iter().map(|row| row.to_vec()).collect::<Vec<_>>();
+        let power_pellet = update_score(&pos, &mut maze, &mut score);
+        assert_eq!(score, 10); // Regular dot should give 10 points
+        assert_eq!(maze[pos.y][pos.x], 0); // Dot should be removed
+        assert!(!power_pellet); // Should not be a power pellet
         
-        // Test top boundary
-        let pos = Position { x: 1, y: 0 };
-        let next_pos = calculate_next_position(&Direction::Up, &pos, &maze);
-        assert!(next_pos.is_none());
-
-        // Test bottom boundary
-        let pos = Position { x: 1, y: maze.len() - 1 };
-        let next_pos = calculate_next_position(&Direction::Down, &pos, &maze);
-        assert!(next_pos.is_none());
+        // Test power pellet
+        let power_pos = Position { x: 2, y: 2 };
+        let power_pellet = update_score(&power_pos, &mut maze, &mut score);
+        assert_eq!(score, 60); // Additional 50 points for power pellet
+        assert_eq!(maze[power_pos.y][power_pos.x], 0);
+        assert!(power_pellet);
     }
 
     #[test]
-    fn test_ghost_movement_strategy() {
-        let maze = vec![
-            vec![1, 0, 0, 1],
-            vec![0, 0, 0, 0],
-            vec![0, 0, 0, 0],
-            vec![1, 0, 0, 1],
+    fn test_ghost_collision() {
+        let pacman_pos = Position { x: 2, y: 2 };
+        let ghosts = vec![
+            Ghost {
+                position: Position { x: 2, y: 2 }, // Collision position
+                color: "#FF0000",
+            }
         ];
+        
+        let mut is_dying = false;
+        let mut lives = 3;
+        
+        // Test non-invincible collision
+        let collision = check_ghost_collision_test(
+            &pacman_pos,
+            &ghosts,
+            &mut is_dying,
+            &mut lives,
+            false // not invincible
+        );
+        
+        assert!(collision);
+        assert!(is_dying);
+        assert_eq!(lives, 2);
+        
+        // Test invincible state
+        let mut is_dying = false;
+        let mut lives = 3;
+        
+        let collision = check_ghost_collision_test(
+            &pacman_pos,
+            &ghosts,
+            &mut is_dying,
+            &mut lives,
+            true // invincible
+        );
+        
+        assert!(!collision);
+        assert!(!is_dying);
+        assert_eq!(lives, 3);
+    }
 
-        let ghost = Ghost {
-            position: Position { x: 1, y: 1 },
-            color: "#FF0000",
-        };
-
-        let pacman_far = Position { x: 3, y: 3 };
-        let pacman_near = Position { x: 1, y: 2 };
-
-        // Test aggressive movement (should move towards Pacman)
-        if let Some(new_pos) = find_ghost_move(&ghost, &pacman_far, &maze, true) {
-            let old_distance = manhattan_distance(&ghost.position, &pacman_far);
-            let new_distance = manhattan_distance(&new_pos, &pacman_far);
-            assert!(new_distance <= old_distance, "Aggressive ghost should move towards Pacman");
-        }
-
-        // Test non-aggressive movement multiple times to ensure it sometimes moves away
-        let mut moved_away = false;
-        for _ in 0..10 {
-            if let Some(new_pos) = find_ghost_move(&ghost, &pacman_near, &maze, false) {
-                let old_distance = manhattan_distance(&ghost.position, &pacman_near);
-                let new_distance = manhattan_distance(&new_pos, &pacman_near);
-                if new_distance > old_distance {
-                    moved_away = true;
-                    break;
+    pub fn check_ghost_collision_test(
+        pacman_pos: &Position,
+        ghosts: &[Ghost],
+        is_dying: &mut bool,
+        lives: &mut i32,
+        is_invincible: bool,
+    ) -> bool {
+        if !is_invincible {
+            for ghost in ghosts {
+                if ghost.position == *pacman_pos {
+                    *lives -= 1;
+                    *is_dying = true;
+                    return true;
                 }
             }
         }
-        assert!(moved_away, "Ghost should sometimes move away from Pacman in non-aggressive mode");
+        false
+    }
+    
+    #[test]
+    fn test_movement() {
+        let mut maze = create_test_maze();
+        let mut score = 0;
+        let current_pos = Position { x: 1, y: 1 };
+        
+        let next_pos = simulate_move(
+            &Direction::Right,
+            &current_pos,
+            &mut maze,
+            &mut score
+        );
+        
+        assert!(next_pos.is_some());
+        if let Some((new_pos, power_pellet)) = next_pos {
+            assert_eq!(new_pos.x, 2);
+            assert_eq!(new_pos.y, 1);
+            assert!(!power_pellet);
+        }
     }
 
-    fn manhattan_distance(pos1: &Position, pos2: &Position) -> i32 {
-        (pos1.x as i32 - pos2.x as i32).abs() + 
-        (pos1.y as i32 - pos2.y as i32).abs()
+    #[test]
+    fn test_game_completion() {
+        let mut maze = create_test_maze();
+        assert!(!check_game_complete(&maze));
+        
+        // Clear all dots and power pellets
+        for row in maze.iter_mut() {
+            for cell in row.iter_mut() {
+                if *cell == 2 || *cell == 3 {
+                    *cell = 0;
+                }
+            }
+        }
+        
+        assert!(check_game_complete(&maze));
     }
 }

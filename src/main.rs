@@ -4,6 +4,7 @@ mod constants;
 mod game_logic;
 mod models;
 mod tests;
+mod controls;
 
 use app::App;
 

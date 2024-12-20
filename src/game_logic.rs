@@ -18,18 +18,7 @@ pub fn find_ghost_move(ghost: &Ghost, pacman_pos: &Position, maze: &[Vec<u8>], a
     };
 
     // Find the move that gets us closest to or furthest from Pacman
-    possible_moves.iter()
-        .min_by_key(|pos| {
-            let dx = pos.x as i32 - pacman_pos.x as i32;
-            let dy = pos.y as i32 - pacman_pos.y as i32;
-            let distance = dx * dx + dy * dy;
-            if make_best_move {
-                distance // Move towards Pacman
-            } else {
-                -distance // Move away from Pacman
-            }
-        })
-        .cloned()
+    find_best_move(&possible_moves, pacman_pos, make_best_move)
 }
 
 /// Calculate valid moves for ghosts based on the maze layout
@@ -52,6 +41,22 @@ pub fn get_valid_ghost_moves(position: &Position, maze: &[Vec<u8>]) -> Vec<Posit
         }
     }
     moves
+}
+
+/// Find the best move for a ghost to reach Pacman
+fn find_best_move(possible_moves: &[Position], pacman_pos: &Position, make_best_move: bool) -> Option<Position> {
+    possible_moves.iter()
+        .min_by_key(|pos| {
+            let dx = pos.x as i32 - pacman_pos.x as i32;
+            let dy = pos.y as i32 - pacman_pos.y as i32;
+            let distance = dx * dx + dy * dy;
+            if make_best_move {
+                distance 
+            } else {
+                -distance 
+            }
+        })
+        .cloned()
 }
 
 /// Initialize ghost positions in valid locations
@@ -90,23 +95,18 @@ pub fn initialize_ghosts(maze: &[Vec<u8>]) -> Vec<Ghost> {
 pub fn calculate_next_position(
     current_direction: &Direction,
     current_pos: &Position,
-    maze: &[Vec<u8>],
-) -> Option<Position> {
+    maze: &mut Vec<Vec<u8>>,
+    score: &mut i32,
+    is_invincible: UseStateHandle<bool>,
+) -> Option<(Position, bool)> {  // Returns position and whether power pellet was eaten
     let mut new_pos = current_pos.clone();
+    let mut power_pellet_eaten = false;
 
     let can_move = match current_direction {
-        Direction::Up => {
-            new_pos.y > 0 && maze[new_pos.y - 1][new_pos.x] != 1
-        }
-        Direction::Down => {
-            new_pos.y < maze.len() - 1 && maze[new_pos.y + 1][new_pos.x] != 1
-        }
-        Direction::Left => {
-            new_pos.x > 0 && maze[new_pos.y][new_pos.x - 1] != 1
-        }
-        Direction::Right => {
-            new_pos.x < maze[0].len() - 1 && maze[new_pos.y][new_pos.x + 1] != 1
-        }
+        Direction::Up => new_pos.y > 0 && maze[new_pos.y - 1][new_pos.x] != 1,
+        Direction::Down => new_pos.y < maze.len() - 1 && maze[new_pos.y + 1][new_pos.x] != 1,
+        Direction::Left => new_pos.x > 0 && maze[new_pos.y][new_pos.x - 1] != 1,
+        Direction::Right => new_pos.x < maze[0].len() - 1 && maze[new_pos.y][new_pos.x + 1] != 1,
         Direction::None => false,
     };
 
@@ -118,43 +118,43 @@ pub fn calculate_next_position(
             Direction::Right => new_pos.x += 1,
             Direction::None => (),
         }
-        Some(new_pos)
+
+        let power_pellet_eaten = update_score(&new_pos, maze, score);
+        Some((new_pos, power_pellet_eaten))
     } else {
         None
     }
 }
 
-/// Update game score based on collected items
-pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>) -> i32 {
+// Update game score based on collected items
+// Returns true if power pellet was eaten
+pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>, score: &mut i32,) -> bool {  
     match maze[pos.y][pos.x] {
-        2 => { // Regular dot
+        2 => {
+            *score += 10;
             maze[pos.y][pos.x] = 0;
-            10
+            false
         }
-        3 => { // Power pellet
+        3 => {
+            *score += 50;
             maze[pos.y][pos.x] = 0;
-            50
+            true
         }
-        _ => 0,
+        _ => false
     }
 }
 
+
 /// Check for collisions between Pacman and ghosts
-pub fn check_ghost_collision(
-    pacman_pos: &Position,
-    ghosts: &[Ghost],
-    is_dying: UseStateHandle<bool>,
-    game_over: UseStateHandle<bool>,
-) -> bool {
-    for ghost in ghosts {
-        if ghost.position == *pacman_pos {
-            is_dying.set(true);
-            let game_over_clone = game_over.clone();
-            Timeout::new(1000, move || {
-                game_over_clone.set(true);
-            })
-            .forget();
-            return true;
+pub fn check_ghost_collision(pacman_pos: &Position, ghosts: &[Ghost], is_dying: UseStateHandle<bool>, 
+                            lives: UseStateHandle<i32>, is_invincible: bool,) -> bool {
+    if !is_invincible {
+        for ghost in ghosts {
+            if ghost.position == *pacman_pos {
+                is_dying.set(true);
+                lives.set(*lives - 1);
+                return true;
+            }
         }
     }
     false
@@ -167,10 +167,10 @@ pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]
     for ghost in ghosts.iter_mut() {
         // Each ghost has a different personality
         let aggressive = match ghost.color {
-            "#FF0000" => rng.gen_bool(0.5),                    // Red ghost: Always aggressive
+            "#FF0000" => true,                    // Red ghost: Always aggressive
             "#00FFFF" => rng.gen_bool(0.4),      // Cyan ghost: Mostly aggressive
             "#FFB8FF" => rng.gen_bool(0.3),      // Pink ghost: Random behavior
-            "#FFB852" => rng.gen_bool(0.1),      // Orange ghost: Mostly passive
+            "#FFB852" => false,      // Orange ghost: Mostly passive
             _ => rng.gen_bool(0.7),              // Default: Random behavior
         };
 
@@ -180,18 +180,8 @@ pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]
     }
 }
 
-/// Find the best move for a ghost to reach Pacman
-fn find_best_move(possible_moves: &[Position], target: &Position) -> Option<Position> {
-    possible_moves.iter()
-        .min_by_key(|pos| {
-            let dx = pos.x as i32 - target.x as i32;
-            let dy = pos.y as i32 - target.y as i32;
-            dx * dx + dy * dy // Manhattan distance
-        })
-        .cloned()
-}
-
 /// Check if the game is complete (all dots collected)
 pub fn check_game_complete(maze: &[Vec<u8>]) -> bool {
     !maze.iter().any(|row| row.iter().any(|&cell| cell == 2 || cell == 3))
 }
+

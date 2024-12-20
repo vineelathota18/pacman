@@ -14,12 +14,14 @@ mod tests {
             is_pacman: false,
             ghost: None,
             is_dying: false,
+            is_invincible: false
         };
 
         assert_eq!(props.cell_type, 2);
         assert!(!props.is_pacman);
         assert!(props.ghost.is_none());
         assert!(!props.is_dying);
+        assert!(!props.is_invincible);
     }
 
     #[wasm_bindgen_test]
@@ -31,6 +33,7 @@ mod tests {
             pacman_pos: Position { x: 0, y: 0 },
             ghosts: vec![],
             is_dying: false,
+            is_invincible: false,
         };
 
         assert_eq!(props.score, 100);
@@ -41,5 +44,6 @@ mod tests {
         assert_eq!(props.pacman_pos.y, 0);
         assert!(props.ghosts.is_empty());
         assert!(!props.is_dying);
+        assert!(!props.is_invincible)
     }
 }

@@ -1,6 +1,8 @@
 use crate::components::game_board::GameBoard;
+use crate::components::scoreboard::Scoreboard;
 use crate::constants::maze::INITIAL_MAZE;
 use crate::models::{Direction, Ghost, Position};
+use crate::controls;
 use crate::game_logic;
 use gloo::events::EventListener;
 use gloo::timers::callback::{Interval, Timeout};
@@ -8,37 +10,6 @@ use rand::Rng;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 use yew::prelude::*;
-
-/*fn initialize_ghosts(maze: &Vec<Vec<u8>>) -> Vec<Ghost> {
-    let mut rng = rand::thread_rng();
-    let ghost_colors = vec!["#FF0000", "#00FFFF", "#FFB8FF", "#FFB852"];
-    let mut valid_positions: Vec<Position> = maze
-        .iter()
-        .enumerate()
-        .flat_map(|(y, row)| {
-            row.iter().enumerate().filter_map(move |(x, &cell)| {
-                if cell != 1 && !(x == 1 && y == 1) {
-                    Some(Position { x, y })
-                } else {
-                    None
-                }
-            })
-        })
-        .collect();
-
-    ghost_colors
-        .iter()
-        .filter_map(|&color| {
-            if valid_positions.is_empty() {
-                None
-            } else {
-                let idx = rng.gen_range(0..valid_positions.len());
-                let position = valid_positions.remove(idx);
-                Some(Ghost { position, color })
-            }
-        })
-        .collect()
-}*/
 
 #[function_component]
 pub fn App() -> Html {
@@ -50,11 +21,9 @@ pub fn App() -> Html {
     let current_direction = use_state(|| Direction::None);
     let game_over = use_state(|| false);
     let move_counter = use_state(|| 0);
-    //let ghosts = use_state(|| initialize_ghosts(&maze));
-    let is_invincible = use_state(|| false); // Added: Track power pellet invincibility
-    let lives = use_state(|| 3);  // Added: Start with 3 lives
-    let restart_timer = use_state(|| false);  // Added: For restart delay
-
+    let is_invincible = use_state(|| false); 
+    let lives = use_state(|| 3);  
+    let restart_timer = use_state(|| false);  
     let initial_ghost_positions = use_state(|| game_logic::initialize_ghosts(&maze));
     let ghosts = use_state(|| (*initial_ghost_positions).clone());
 
@@ -129,67 +98,31 @@ pub fn App() -> Html {
                 }
 
                 // Check for ghost collision only if not invincible
-                if !*is_invincible {
-                    for ghost in (*ghosts).iter() {
-                        if ghost.position == *pacman_pos {
-                            is_dying.set(true);
-                            lives.set(*lives - 1);
-                            let reset = reset_positions.clone();
-                            Timeout::new(1000, move || {
-                                reset();
-                            })
-                            .forget();
-                            return;
-                        }
-                    }
+                if game_logic::check_ghost_collision(&pacman_pos, &ghosts, is_dying.clone(), lives.clone(), *is_invincible,) {
+                    let reset = reset_positions.clone();
+                    Timeout::new(1000, move || {
+                        reset();
+                    }).forget();
+                    return;
                 }
 
                 let mut new_pos = (*pacman_pos).clone();
                 let mut maze_clone = (*maze).clone();
                 let mut current_score = *score;
 
-                let can_move = match *current_direction {
-                    Direction::Up => new_pos.y > 0 && maze_clone[new_pos.y - 1][new_pos.x] != 1,
-                    Direction::Down => {
-                        new_pos.y < maze_clone.len() - 1 && maze_clone[new_pos.y + 1][new_pos.x] != 1
+                if let Some((next_pos, power_pellet_eaten)) = game_logic::calculate_next_position(
+                    &current_direction, &new_pos, &mut maze_clone, &mut current_score, is_invincible.clone(),) {
+                    new_pos = next_pos;
+        
+                    if power_pellet_eaten {
+                        is_invincible.set(true);
+                        let is_invincible_clone = is_invincible.clone();
+                        Timeout::new(5000, move || {
+                            is_invincible_clone.set(false);
+                        })
+                        .forget();
                     }
-                    Direction::Left => new_pos.x > 0 && maze_clone[new_pos.y][new_pos.x - 1] != 1,
-                    Direction::Right => {
-                        new_pos.x < maze_clone[0].len() - 1 && maze_clone[new_pos.y][new_pos.x + 1] != 1
-                    }
-                    Direction::None => false,
-                };
-
-                if can_move {
-                    match *current_direction {
-                        Direction::Up => new_pos.y -= 1,
-                        Direction::Down => new_pos.y += 1,
-                        Direction::Left => new_pos.x -= 1,
-                        Direction::Right => new_pos.x += 1,
-                        Direction::None => (),
-                    }
-
-                    // Update score and handle power pellet
-                    match maze_clone[new_pos.y][new_pos.x] {
-                        2 => {
-                            current_score += 10;
-                            maze_clone[new_pos.y][new_pos.x] = 0;
-                        }
-                        3 => {
-                            current_score += 50;
-                            maze_clone[new_pos.y][new_pos.x] = 0;
-                            // Set invincibility when power pellet is eaten
-                            is_invincible.set(true);
-                            let is_invincible_clone = is_invincible.clone();
-                            // Remove invincibility after 3 seconds
-                            Timeout::new(5000, move || {
-                                is_invincible_clone.set(false);
-                            })
-                            .forget();
-                        }
-                        _ => {}
-                    }
-
+        
                     pacman_pos.set(new_pos);
                     maze.set(maze_clone);
                     score.set(current_score);
@@ -203,56 +136,22 @@ pub fn App() -> Html {
     // Keyboard controls effect
     {
         let current_direction = current_direction.clone();
-
         use_effect(move || {
-            let document = web_sys::window().unwrap().document().unwrap();
-
-            let handler = move |event: &web_sys::Event| {
-                let event = event.dyn_ref::<KeyboardEvent>().unwrap();
-
-                let new_direction = match event.key().as_str() {
-                    "ArrowUp" => Direction::Up,
-                    "ArrowDown" => Direction::Down,
-                    "ArrowLeft" => Direction::Left,
-                    "ArrowRight" => Direction::Right,
-                    _ => return,
-                };
-
-                current_direction.set(new_direction);
-            };
-
-            let listener = EventListener::new(&document, "keydown", handler);
-
+            let listener = controls::setup_keyboard_controls(current_direction);
             move || drop(listener)
         });
     }
 
-    let style = format!("grid-template-columns: repeat({}, 1fr);", maze[0].len());
     // Render game board
     html! {
         <>
-            <div class="game-info">
-                <div class="score">{"Score: "}{*score}</div>
-                <div class="lives">{"Lives: "}{*lives}</div>
-                <div class="score">{"is_invincible"}{*is_invincible}</div>
-                {
-                    if *restart_timer {
-                        html! {
-                            <div class="message">{"Get Ready!"}</div>
-                        }
-                    } else if *game_over {
-                        html! {
-                            <div class="game-over">{"Game Over!"}</div>
-                        }
-                    } else if *is_invincible {
-                        html! {
-                            <div class="power-pellet">{"Power Pellet Active!"}</div>
-                        }
-                    } else {
-                        html! {}
-                    }
-                }
-            </div>
+            <Scoreboard
+                score={*score}
+                lives={*lives}
+                is_invincible={*is_invincible}
+                restart_timer={*restart_timer}
+                game_over={*game_over}
+            />
             <GameBoard
                 score={*score}
                 game_over={*game_over}
