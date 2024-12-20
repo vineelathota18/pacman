@@ -3,12 +3,22 @@ use serde::{Deserialize, Serialize};
 use yew::prelude::*;
 use web_sys::KeyboardEvent;
 use gloo::events::EventListener;
+use gloo::timers::callback::{Interval, Timeout};
 use wasm_bindgen::JsCast;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 struct Position {
     x: usize,
     y: usize,
+}
+
+#[derive(Clone, PartialEq)]
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+    None,
 }
 
 #[derive(Clone, PartialEq)]
@@ -22,7 +32,7 @@ struct CellProps {
     cell_type: u8,
     is_pacman: bool,
     ghost: Option<Ghost>,
-    is_dying: bool, 
+    is_dying: bool,
 }
 
 #[function_component]
@@ -86,7 +96,7 @@ fn App() -> Html {
         vec![1, 2, 2, 2, 2, 1, 2, 2, 2, 1, 1, 2, 2, 2, 1, 2, 2, 2, 2, 1],
         vec![1, 1, 1, 1, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1, 1],
         vec![1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1],
-        vec![1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 1],
+        vec![1, 2, 2, 2, 2, 2, 2, 1, 1, 3, 2, 1, 1, 2, 2, 2, 2, 2, 2, 1],
         vec![1, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 1],
         vec![1, 1, 1, 1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1],
         vec![1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1],
@@ -101,8 +111,9 @@ fn App() -> Html {
 
     let pacman_pos = use_state(|| Position { x: 1, y: 1 });
     let score = use_state(|| 0);
-    let game_over = use_state(|| false);
     let is_dying = use_state(|| false);
+    let current_direction = use_state(|| Direction::None);
+    let game_over = use_state(|| false);
     
     let ghosts = use_state(|| {
         let mut rng = rand::thread_rng();
@@ -133,13 +144,87 @@ fn App() -> Html {
             .collect::<Vec<_>>()
     });
 
+    // Add movement interval
     {
         let pacman_pos = pacman_pos.clone();
+        let current_direction = current_direction.clone();
         let maze = maze.clone();
         let score = score.clone();
         let game_over = game_over.clone();
-        let ghosts = ghosts.clone();
+        let ghosts = ghosts.clone(); 
         let is_dying_handler = is_dying.clone();
+
+        use_effect(move || {
+            let interval = Interval::new(150, move || {
+                if*game_over || *is_dying_handler {
+                    return;
+                }
+                let mut new_pos = (*pacman_pos).clone();
+                let mut maze_clone = (*maze).clone();
+                let mut current_score = *score;
+
+                let can_move = match *current_direction {
+                    Direction::Up => {
+                        new_pos.y > 0 && maze_clone[new_pos.y - 1][new_pos.x] != 1
+                    }
+                    Direction::Down => {
+                        new_pos.y < maze_clone.len() - 1 && maze_clone[new_pos.y + 1][new_pos.x] != 1
+                    }
+                    Direction::Left => {
+                        new_pos.x > 0 && maze_clone[new_pos.y][new_pos.x - 1] != 1
+                    }
+                    Direction::Right => {
+                        new_pos.x < maze_clone[0].len() - 1 && maze_clone[new_pos.y][new_pos.x + 1] != 1
+                    }
+                    Direction::None => false,
+                };
+
+                if can_move {
+                    match *current_direction {
+                        Direction::Up => new_pos.y -= 1,
+                        Direction::Down => new_pos.y += 1,
+                        Direction::Left => new_pos.x -= 1,
+                        Direction::Right => new_pos.x += 1,
+                        Direction::None => (),
+                    }
+
+                    for ghost in (*ghosts).iter() {
+                        if ghost.position.x == new_pos.x && ghost.position.y == new_pos.y {
+                            is_dying_handler.set(true); 
+                            let game_over_clone = game_over.clone();
+                            Timeout::new(1000, move || {
+                                game_over_clone.set(true);
+                            }).forget();
+                            return;
+                        }
+                    }
+
+                    // Check if new position contains food
+                    match maze_clone[new_pos.y][new_pos.x] {
+                        2 => { // Regular dot
+                            current_score += 10;
+                            maze_clone[new_pos.y][new_pos.x] = 0;
+                        }
+                        3 => { // Power pellet
+                            current_score += 50;
+                            maze_clone[new_pos.y][new_pos.x] = 0;
+                        }
+                        _ => {}
+                    }
+
+                    pacman_pos.set(new_pos);
+                    maze.set(maze_clone);
+                    score.set(current_score);
+                }
+            });
+
+            move || drop(interval)
+        });
+    }
+
+    // Keyboard event listener for direction changes
+    {
+        let current_direction = current_direction.clone();
 
         use_effect(move || {
             let document = web_sys::window()
@@ -148,65 +233,17 @@ fn App() -> Html {
                 .unwrap();
 
             let handler = move |event: &web_sys::Event| {
-                if*game_over || *is_dying_handler {
-                    return;
-                }
-
                 let event = event.dyn_ref::<KeyboardEvent>().unwrap();
-                let mut new_pos = (*pacman_pos).clone();
-                let mut maze_clone = (*maze).clone();
-                let mut current_score = *score;
-
-                match event.key().as_str() {
-                    "ArrowUp" => {
-                        if new_pos.y > 0 && maze_clone[new_pos.y - 1][new_pos.x] != 1 {
-                            new_pos.y -= 1;
-                        }
-                    }
-                    "ArrowDown" => {
-                        if new_pos.y < maze_clone.len() - 1 && maze_clone[new_pos.y + 1][new_pos.x] != 1 {
-                            new_pos.y += 1;
-                        }
-                    }
-                    "ArrowLeft" => {
-                        if new_pos.x > 0 && maze_clone[new_pos.y][new_pos.x - 1] != 1 {
-                            new_pos.x -= 1;
-                        }
-                    }
-                    "ArrowRight" => {
-                        if new_pos.x < maze_clone[0].len() - 1 && maze_clone[new_pos.y][new_pos.x + 1] != 1 {
-                            new_pos.x += 1;
-                        }
-                    }
+                
+                let new_direction = match event.key().as_str() {
+                    "ArrowUp" => Direction::Up,
+                    "ArrowDown" => Direction::Down,
+                    "ArrowLeft" => Direction::Left,
+                    "ArrowRight" => Direction::Right,
                     _ => return,
-                }
+                };
 
-                for ghost in (*ghosts).iter() {
-                    if ghost.position.x == new_pos.x && ghost.position.y == new_pos.y {
-                        is_dying_handler.set(true); 
-                        let game_over_clone = game_over.clone();
-                        gloo_timers::callback::Timeout::new(1000, move || {
-                            game_over_clone.set(true);
-                        }).forget();
-                        return;
-                    }
-                }
-
-                match maze_clone[new_pos.y][new_pos.x] {
-                    2 => {
-                        current_score += 10;
-                        maze_clone[new_pos.y][new_pos.x] = 0;
-                    }
-                    3 => {
-                        current_score += 50;
-                        maze_clone[new_pos.y][new_pos.x] = 0;
-                    }
-                    _ => {}
-                }
-
-                pacman_pos.set(new_pos);
-                maze.set(maze_clone);
-                score.set(current_score);
+                current_direction.set(new_direction);
             };
 
             let listener = EventListener::new(&document, "keydown", handler);
