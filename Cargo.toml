@@ -11,3 +11,8 @@ web-sys = { version = "0.3", features = ["KeyboardEvent", "Document"] }
 gloo = { version = "0.10", features = ["events", "timers"] }
 wasm-bindgen = "0.2"
 gloo-timers = "0.3.0"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+gloo = "0.8"
+wasm-bindgen = "0.2"

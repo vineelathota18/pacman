@@ -3,6 +3,7 @@ mod components;
 mod constants;
 mod game_logic;
 mod models;
+mod tests;
 
 use app::App;
 
