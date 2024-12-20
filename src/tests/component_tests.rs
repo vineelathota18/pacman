@@ -4,9 +4,9 @@ mod tests {
     use crate::components::game_board::GameBoardProps;
     use crate::components::scoreboard::{Scoreboard, ScoreboardProps};
     use crate::models::Position;
-    use yew::prelude::*;
-    use web_sys::{HtmlElement, Element};
     use wasm_bindgen::JsCast;
+    use web_sys::{Element, HtmlElement};
+    use yew::prelude::*;
 
     #[function_component(TestApp)]
     fn test_app(props: &ScoreboardProps) -> Html {
@@ -22,12 +22,10 @@ mod tests {
 
     fn render_component(props: ScoreboardProps) -> HtmlElement {
         let document = gloo::utils::document();
-        let container: Element = document
-            .create_element("div")
-            .unwrap();
-        
+        let container: Element = document.create_element("div").unwrap();
+
         document.body().unwrap().append_child(&container).unwrap();
-        
+
         yew::Renderer::<TestApp>::with_root_and_props(container.clone(), props).render();
         container.dyn_into::<HtmlElement>().unwrap()
     }
@@ -39,7 +37,7 @@ mod tests {
             is_pacman: false,
             ghost: None,
             is_dying: false,
-            is_invincible: false
+            is_invincible: false,
         };
 
         assert_eq!(props.cell_type, 2);

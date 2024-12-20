@@ -15,7 +15,10 @@ pub struct GameBoardProps {
 
 #[function_component]
 pub fn GameBoard(props: &GameBoardProps) -> Html {
-    let style = format!("grid-template-columns: repeat({}, 1fr);", props.maze[0].len());
+    let style = format!(
+        "grid-template-columns: repeat({}, 1fr);",
+        props.maze[0].len()
+    );
 
     html! {
         <>

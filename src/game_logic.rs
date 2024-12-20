@@ -2,7 +2,12 @@ use crate::models::{Direction, Ghost, Position};
 use rand::Rng;
 use yew::UseStateHandle;
 
-pub fn find_ghost_move(ghost: &Ghost, pacman_pos: &Position, maze: &[Vec<u8>], aggressive: bool) -> Option<Position> {
+pub fn find_ghost_move(
+    ghost: &Ghost,
+    pacman_pos: &Position,
+    maze: &[Vec<u8>],
+    aggressive: bool,
+) -> Option<Position> {
     let possible_moves = get_valid_ghost_moves(&ghost.position, maze);
     if possible_moves.is_empty() {
         return None;
@@ -24,15 +29,17 @@ pub fn find_ghost_move(ghost: &Ghost, pacman_pos: &Position, maze: &[Vec<u8>], a
 pub fn get_valid_ghost_moves(position: &Position, maze: &[Vec<u8>]) -> Vec<Position> {
     let mut moves = Vec::new();
     let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]; // Up, Down, Left, Right
-    
+
     for (dx, dy) in directions.iter() {
         let new_x = position.x as i32 + dx;
         let new_y = position.y as i32 + dy;
-        
-        if new_x >= 0 && new_y >= 0 && 
-           new_x < maze[0].len() as i32 && 
-           new_y < maze.len() as i32 && 
-           maze[new_y as usize][new_x as usize] != 1 {
+
+        if new_x >= 0
+            && new_y >= 0
+            && new_x < maze[0].len() as i32
+            && new_y < maze.len() as i32
+            && maze[new_y as usize][new_x as usize] != 1
+        {
             moves.push(Position {
                 x: new_x as usize,
                 y: new_y as usize,
@@ -43,16 +50,21 @@ pub fn get_valid_ghost_moves(position: &Position, maze: &[Vec<u8>]) -> Vec<Posit
 }
 
 /// Find the best move for a ghost to reach Pacman
-fn find_best_move(possible_moves: &[Position], pacman_pos: &Position, make_best_move: bool) -> Option<Position> {
-    possible_moves.iter()
+fn find_best_move(
+    possible_moves: &[Position],
+    pacman_pos: &Position,
+    make_best_move: bool,
+) -> Option<Position> {
+    possible_moves
+        .iter()
         .min_by_key(|pos| {
             let dx = pos.x as i32 - pacman_pos.x as i32;
             let dy = pos.y as i32 - pacman_pos.y as i32;
             let distance = dx * dx + dy * dy;
             if make_best_move {
-                distance 
+                distance
             } else {
-                -distance 
+                -distance
             }
         })
         .cloned()
@@ -96,7 +108,8 @@ pub fn calculate_next_position(
     current_pos: &Position,
     maze: &mut Vec<Vec<u8>>,
     score: &mut i32,
-) -> Option<(Position, bool)> {  // Returns position and whether power pellet was eaten
+) -> Option<(Position, bool)> {
+    // Returns position and whether power pellet was eaten
     let mut new_pos = current_pos.clone();
 
     let can_move = match current_direction {
@@ -125,7 +138,7 @@ pub fn calculate_next_position(
 
 // Update game score based on collected items
 // Returns true if power pellet was eaten
-pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>, score: &mut i32,) -> bool {  
+pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>, score: &mut i32) -> bool {
     match maze[pos.y][pos.x] {
         2 => {
             *score += 10;
@@ -137,14 +150,18 @@ pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>, score: &mut i32,) -
             maze[pos.y][pos.x] = 0;
             true
         }
-        _ => false
+        _ => false,
     }
 }
 
-
 /// Check for collisions between Pacman and ghosts
-pub fn check_ghost_collision(pacman_pos: &Position, ghosts: &[Ghost], is_dying: UseStateHandle<bool>, 
-                            lives: UseStateHandle<i32>, invincibility: i32,) -> bool {
+pub fn check_ghost_collision(
+    pacman_pos: &Position,
+    ghosts: &[Ghost],
+    is_dying: UseStateHandle<bool>,
+    lives: UseStateHandle<i32>,
+    invincibility: i32,
+) -> bool {
     if invincibility <= 0 {
         for ghost in ghosts {
             if ghost.position == *pacman_pos {
@@ -160,15 +177,15 @@ pub fn check_ghost_collision(pacman_pos: &Position, ghosts: &[Ghost], is_dying: 
 /// Move ghosts towards Pacman
 pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]) {
     let mut rng = rand::thread_rng();
-    
+
     for ghost in ghosts.iter_mut() {
         // Each ghost has a different personality
         let aggressive = match ghost.color {
-            "#FF0000" => true,                    // Red ghost: Always aggressive
-            "#00FFFF" => rng.gen_bool(0.4),      // Cyan ghost: Mostly aggressive
-            "#FFB8FF" => rng.gen_bool(0.3),      // Pink ghost: Random behavior
-            "#FFB852" => false,      // Orange ghost: Mostly passive
-            _ => rng.gen_bool(0.7),              // Default: Random behavior
+            "#FF0000" => true,              // Red ghost: Always aggressive
+            "#00FFFF" => rng.gen_bool(0.4), // Cyan ghost: Mostly aggressive
+            "#FFB8FF" => rng.gen_bool(0.3), // Pink ghost: Random behavior
+            "#FFB852" => false,             // Orange ghost: Mostly passive
+            _ => rng.gen_bool(0.7),         // Default: Random behavior
         };
 
         if let Some(new_pos) = find_ghost_move(ghost, pacman_pos, maze, aggressive) {
@@ -176,4 +193,3 @@ pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]
         }
     }
 }
-

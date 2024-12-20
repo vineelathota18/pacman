@@ -1,10 +1,10 @@
 mod app;
 mod components;
 mod constants;
+mod controls;
 mod game_logic;
 mod models;
 mod tests;
-mod controls;
 
 use app::App;
 

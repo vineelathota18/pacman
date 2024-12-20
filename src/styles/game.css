@@ -247,7 +247,26 @@
     background-color: #45a049;
     transform: translate(-50%, -50%) scale(1.1);
 }
+.lives {
+    display: flex;
+    align-items: center;
+    color: #FFD700;
+}
 
+.lives .cell.pacman {
+    margin-right: 8px;
+    height: 40px;
+    width: 40px;
+    background-color: #FFD700;
+}
+
+.lives-count {
+    font-size: 32px;
+    font-weight: bold;
+    margin-left: 40px;
+    margin-left: 6px;
+    margin-top: 4px;
+}
 @keyframes float {
 
     0%,

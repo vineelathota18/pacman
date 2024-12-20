@@ -1,26 +1,31 @@
 use crate::components::game_board::GameBoard;
 use crate::components::scoreboard::Scoreboard;
 use crate::constants::maze::INITIAL_MAZE;
-use crate::models::{Direction, Position};
 use crate::controls;
 use crate::game_logic;
-use yew_hooks::use_counter;
+use crate::models::{Direction, Position};
 use gloo::timers::callback::{Interval, Timeout};
 use yew::prelude::*;
+use yew_hooks::use_counter;
 
 #[function_component]
 pub fn App() -> Html {
     // State initialization
-    let maze = use_state(|| INITIAL_MAZE.iter().map(|row| row.to_vec()).collect::<Vec<_>>());
+    let maze = use_state(|| {
+        INITIAL_MAZE
+            .iter()
+            .map(|row| row.to_vec())
+            .collect::<Vec<_>>()
+    });
     let pacman_pos = use_state(|| Position { x: 1, y: 1 });
     let score = use_state(|| 0);
     let is_dying = use_state(|| false);
     let current_direction = use_state(|| Direction::None);
     let game_over = use_state(|| false);
     let move_counter = use_state(|| 0);
-    let is_invincible = use_state(|| false); 
-    let lives = use_state(|| 3);  
-    let restart_timer = use_state(|| false);  
+    let is_invincible = use_state(|| false);
+    let lives = use_state(|| 3);
+    let restart_timer = use_state(|| false);
     let initial_ghost_positions = use_state(|| game_logic::initialize_ghosts(&maze));
     let ghosts = use_state(|| (*initial_ghost_positions).clone());
     let invincibility = use_counter(0);
@@ -66,7 +71,12 @@ pub fn App() -> Html {
         let restart_timer = restart_timer.clone();
 
         Callback::from(move |_| {
-            maze.set(INITIAL_MAZE.iter().map(|row| row.to_vec()).collect::<Vec<_>>());
+            maze.set(
+                INITIAL_MAZE
+                    .iter()
+                    .map(|row| row.to_vec())
+                    .collect::<Vec<_>>(),
+            );
             pacman_pos.set(Position { x: 1, y: 1 });
             score.set(0);
             is_dying.set(false);
@@ -79,7 +89,7 @@ pub fn App() -> Html {
             let initial_ghosts = game_logic::initialize_ghosts(&maze);
             ghosts.set(initial_ghosts);
         })
-    };  
+    };
 
     // Game loop effect
     {
@@ -124,11 +134,18 @@ pub fn App() -> Html {
                     ghosts.set(new_ghosts);
                 }
 
-                if game_logic::check_ghost_collision(&pacman_pos, &ghosts, is_dying.clone(), lives.clone(), *invincibility,) {
+                if game_logic::check_ghost_collision(
+                    &pacman_pos,
+                    &ghosts,
+                    is_dying.clone(),
+                    lives.clone(),
+                    *invincibility,
+                ) {
                     let reset = reset_positions.clone();
                     Timeout::new(1000, move || {
                         reset();
-                    }).forget();
+                    })
+                    .forget();
                     return;
                 }
 
@@ -137,9 +154,13 @@ pub fn App() -> Html {
                 let mut current_score = *score;
 
                 if let Some((next_pos, power_pellet_eaten)) = game_logic::calculate_next_position(
-                    &current_direction, &new_pos, &mut maze_clone, &mut current_score) {
+                    &current_direction,
+                    &new_pos,
+                    &mut maze_clone,
+                    &mut current_score,
+                ) {
                     new_pos = next_pos;
-        
+
                     if power_pellet_eaten {
                         invincibility.increase();
                         let invincibility_clone = invincibility.clone();
@@ -148,7 +169,7 @@ pub fn App() -> Html {
                         })
                         .forget();
                     }
-        
+
                     pacman_pos.set(new_pos);
                     maze.set(maze_clone);
                     score.set(current_score);

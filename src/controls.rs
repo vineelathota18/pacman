@@ -17,10 +17,7 @@ pub fn get_direction_from_key(key: &str) -> Option<Direction> {
 
 /// Sets up keyboard event listeners for game controls
 pub fn setup_keyboard_controls(current_direction: UseStateHandle<Direction>) -> EventListener {
-    let document = web_sys::window()
-        .unwrap()
-        .document()
-        .unwrap();
+    let document = web_sys::window().unwrap().document().unwrap();
 
     let handler = move |event: &web_sys::Event| {
         let event = event.dyn_ref::<KeyboardEvent>().unwrap();
