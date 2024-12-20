@@ -1,5 +1,4 @@
 use crate::models::{Direction, Ghost, Position};
-use gloo::timers::callback::Timeout;
 use rand::Rng;
 use yew::UseStateHandle;
 
@@ -97,10 +96,8 @@ pub fn calculate_next_position(
     current_pos: &Position,
     maze: &mut Vec<Vec<u8>>,
     score: &mut i32,
-    is_invincible: UseStateHandle<bool>,
 ) -> Option<(Position, bool)> {  // Returns position and whether power pellet was eaten
     let mut new_pos = current_pos.clone();
-    let mut power_pellet_eaten = false;
 
     let can_move = match current_direction {
         Direction::Up => new_pos.y > 0 && maze[new_pos.y - 1][new_pos.x] != 1,
@@ -178,10 +175,5 @@ pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]
             ghost.position = new_pos;
         }
     }
-}
-
-/// Check if the game is complete (all dots collected)
-pub fn check_game_complete(maze: &[Vec<u8>]) -> bool {
-    !maze.iter().any(|row| row.iter().any(|&cell| cell == 2 || cell == 3))
 }
 

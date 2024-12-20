@@ -228,6 +228,25 @@
     justify-content: center;
     animation: float 1s ease-in-out infinite;
 }
+.restart-button {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 20px;
+    font-size: 24px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.restart-button:hover {
+    background-color: #45a049;
+    transform: translate(-50%, -50%) scale(1.1);
+}
 
 @keyframes float {
 

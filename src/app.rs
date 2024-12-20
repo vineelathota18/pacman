@@ -1,15 +1,11 @@
 use crate::components::game_board::GameBoard;
 use crate::components::scoreboard::Scoreboard;
 use crate::constants::maze::INITIAL_MAZE;
-use crate::models::{Direction, Ghost, Position};
+use crate::models::{Direction, Position};
 use crate::controls;
 use crate::game_logic;
 use yew_hooks::use_counter;
-use gloo::events::EventListener;
 use gloo::timers::callback::{Interval, Timeout};
-use rand::Rng;
-use wasm_bindgen::JsCast;
-use web_sys::KeyboardEvent;
 use yew::prelude::*;
 
 #[function_component]
@@ -55,6 +51,35 @@ pub fn App() -> Html {
             }
         }
     };
+
+    let restart_game = {
+        let maze = maze.clone();
+        let pacman_pos = pacman_pos.clone();
+        let score = score.clone();
+        let is_dying = is_dying.clone();
+        let current_direction = current_direction.clone();
+        let game_over = game_over.clone();
+        let move_counter = move_counter.clone();
+        let lives = lives.clone();
+        let ghosts = ghosts.clone();
+        let is_invincible = is_invincible.clone();
+        let restart_timer = restart_timer.clone();
+
+        Callback::from(move |_| {
+            maze.set(INITIAL_MAZE.iter().map(|row| row.to_vec()).collect::<Vec<_>>());
+            pacman_pos.set(Position { x: 1, y: 1 });
+            score.set(0);
+            is_dying.set(false);
+            current_direction.set(Direction::None);
+            game_over.set(false);
+            move_counter.set(0);
+            lives.set(3);
+            is_invincible.set(false);
+            restart_timer.set(false);
+            let initial_ghosts = game_logic::initialize_ghosts(&maze);
+            ghosts.set(initial_ghosts);
+        })
+    };  
 
     // Game loop effect
     {
@@ -112,7 +137,7 @@ pub fn App() -> Html {
                 let mut current_score = *score;
 
                 if let Some((next_pos, power_pellet_eaten)) = game_logic::calculate_next_position(
-                    &current_direction, &new_pos, &mut maze_clone, &mut current_score, is_invincible.clone(),) {
+                    &current_direction, &new_pos, &mut maze_clone, &mut current_score) {
                     new_pos = next_pos;
         
                     if power_pellet_eaten {
@@ -150,6 +175,7 @@ pub fn App() -> Html {
                 lives={*lives}
                 restart_timer={*restart_timer}
                 game_over={*game_over}
+                on_restart={restart_game.clone()}
             />
             <GameBoard
                 score={*score}
