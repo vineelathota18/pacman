@@ -5,7 +5,6 @@ mod game_logic_tests {
     use crate::game_logic::*;
     use std::cell::RefCell;
 
-    // Helper function to simulate game move
     fn simulate_move(
         direction: &Direction,
         current_pos: &Position,
@@ -62,10 +61,10 @@ mod game_logic_tests {
         let pos = Position { x: 1, y: 1 };
         
         let valid_moves = get_valid_ghost_moves(&pos, &maze);
-        assert_eq!(valid_moves.len(), 2); // Should have 2 valid moves (right and down)
+        assert_eq!(valid_moves.len(), 2); 
         
-        assert!(valid_moves.contains(&Position { x: 2, y: 1 })); // Right
-        assert!(valid_moves.contains(&Position { x: 1, y: 2 })); // Down
+        assert!(valid_moves.contains(&Position { x: 2, y: 1 })); 
+        assert!(valid_moves.contains(&Position { x: 1, y: 2 })); 
     }
 
     #[test]
@@ -80,7 +79,7 @@ mod game_logic_tests {
         let next_move = find_ghost_move(&ghost, &pacman_pos, &maze, true);
         assert!(next_move.is_some());
         if let Some(new_pos) = next_move {
-            assert!(new_pos.x > ghost.position.x); // Should move right towards Pacman
+            assert!(new_pos.x > ghost.position.x); 
         }
     }
 
@@ -88,17 +87,16 @@ mod game_logic_tests {
     fn test_score_update() {
         let mut maze = create_test_maze();
         let mut score = 0;
-        let pos = Position { x: 2, y: 1 }; // Position with a dot
+        let pos = Position { x: 2, y: 1 }; 
         
         let power_pellet = update_score(&pos, &mut maze, &mut score);
-        assert_eq!(score, 10); // Regular dot should give 10 points
-        assert_eq!(maze[pos.y][pos.x], 0); // Dot should be removed
-        assert!(!power_pellet); // Should not be a power pellet
+        assert_eq!(score, 10); 
+        assert_eq!(maze[pos.y][pos.x], 0); 
+        assert!(!power_pellet); 
         
-        // Test power pellet
         let power_pos = Position { x: 2, y: 2 };
         let power_pellet = update_score(&power_pos, &mut maze, &mut score);
-        assert_eq!(score, 60); // Additional 50 points for power pellet
+        assert_eq!(score, 60); 
         assert_eq!(maze[power_pos.y][power_pos.x], 0);
         assert!(power_pellet);
     }
@@ -108,7 +106,7 @@ mod game_logic_tests {
         let pacman_pos = Position { x: 2, y: 2 };
         let ghosts = vec![
             Ghost {
-                position: Position { x: 2, y: 2 }, // Collision position
+                position: Position { x: 2, y: 2 }, 
                 color: "#FF0000",
             }
         ];
@@ -116,20 +114,18 @@ mod game_logic_tests {
         let mut is_dying = false;
         let mut lives = 3;
         
-        // Test non-invincible collision
         let collision = check_ghost_collision_test(
             &pacman_pos,
             &ghosts,
             &mut is_dying,
             &mut lives,
-            false // not invincible
+            false 
         );
         
         assert!(collision);
         assert!(is_dying);
         assert_eq!(lives, 2);
         
-        // Test invincible state
         let mut is_dying = false;
         let mut lives = 3;
         
@@ -138,7 +134,7 @@ mod game_logic_tests {
             &ghosts,
             &mut is_dying,
             &mut lives,
-            true // invincible
+            true 
         );
         
         assert!(!collision);
@@ -191,7 +187,6 @@ mod game_logic_tests {
         let mut maze = create_test_maze();
         assert!(!check_game_complete(&maze));
         
-        // Clear all dots and power pellets
         for row in maze.iter_mut() {
             for cell in row.iter_mut() {
                 if *cell == 2 || *cell == 3 {

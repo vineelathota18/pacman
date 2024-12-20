@@ -147,8 +147,8 @@ pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>, score: &mut i32,) -
 
 /// Check for collisions between Pacman and ghosts
 pub fn check_ghost_collision(pacman_pos: &Position, ghosts: &[Ghost], is_dying: UseStateHandle<bool>, 
-                            lives: UseStateHandle<i32>, is_invincible: bool,) -> bool {
-    if !is_invincible {
+                            lives: UseStateHandle<i32>, invincibility: i32,) -> bool {
+    if invincibility <= 0 {
         for ghost in ghosts {
             if ghost.position == *pacman_pos {
                 is_dying.set(true);

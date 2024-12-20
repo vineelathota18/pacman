@@ -41,7 +41,7 @@ pub fn Cell(props: &CellProps) -> Html {
         }
     } else if let Some(ghost) = &props.ghost {
         let ghost_color = if props.is_invincible {
-            "#808080".to_string() // Grey color for vulnerable ghosts
+            "#808080".to_string() 
         } else {
             ghost.color.to_string()
         };

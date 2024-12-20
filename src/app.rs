@@ -4,6 +4,7 @@ use crate::constants::maze::INITIAL_MAZE;
 use crate::models::{Direction, Ghost, Position};
 use crate::controls;
 use crate::game_logic;
+use yew_hooks::use_counter;
 use gloo::events::EventListener;
 use gloo::timers::callback::{Interval, Timeout};
 use rand::Rng;
@@ -26,6 +27,7 @@ pub fn App() -> Html {
     let restart_timer = use_state(|| false);  
     let initial_ghost_positions = use_state(|| game_logic::initialize_ghosts(&maze));
     let ghosts = use_state(|| (*initial_ghost_positions).clone());
+    let invincibility = use_counter(0);
 
     let reset_positions = {
         let pacman_pos = pacman_pos.clone();
@@ -67,7 +69,7 @@ pub fn App() -> Html {
             move_counter,
             lives,
             restart_timer,
-            is_invincible,
+            invincibility,
         ) = (
             pacman_pos.clone(),
             current_direction.clone(),
@@ -79,7 +81,7 @@ pub fn App() -> Html {
             move_counter.clone(),
             lives.clone(),
             restart_timer.clone(),
-            is_invincible.clone(),
+            invincibility.clone(),
         );
 
         use_effect(move || {
@@ -97,8 +99,7 @@ pub fn App() -> Html {
                     ghosts.set(new_ghosts);
                 }
 
-                // Check for ghost collision only if not invincible
-                if game_logic::check_ghost_collision(&pacman_pos, &ghosts, is_dying.clone(), lives.clone(), *is_invincible,) {
+                if game_logic::check_ghost_collision(&pacman_pos, &ghosts, is_dying.clone(), lives.clone(), *invincibility,) {
                     let reset = reset_positions.clone();
                     Timeout::new(1000, move || {
                         reset();
@@ -115,10 +116,10 @@ pub fn App() -> Html {
                     new_pos = next_pos;
         
                     if power_pellet_eaten {
-                        is_invincible.set(true);
-                        let is_invincible_clone = is_invincible.clone();
+                        invincibility.increase();
+                        let invincibility_clone = invincibility.clone();
                         Timeout::new(5000, move || {
-                            is_invincible_clone.set(false);
+                            invincibility_clone.decrease();
                         })
                         .forget();
                     }
@@ -142,13 +143,11 @@ pub fn App() -> Html {
         });
     }
 
-    // Render game board
     html! {
         <>
             <Scoreboard
                 score={*score}
                 lives={*lives}
-                is_invincible={*is_invincible}
                 restart_timer={*restart_timer}
                 game_over={*game_over}
             />
@@ -159,7 +158,7 @@ pub fn App() -> Html {
                 pacman_pos={(*pacman_pos).clone()}
                 ghosts={(*ghosts).clone()}
                 is_dying={*is_dying}
-                is_invincible={*is_invincible}
+                is_invincible={*invincibility > 0}
             />
         </>
     }

@@ -1,13 +1,38 @@
 #[cfg(test)]
 mod tests {
-    use wasm_bindgen_test::*;
     use crate::components::cell::CellProps;
     use crate::components::game_board::GameBoardProps;
+    use crate::components::scoreboard::{Scoreboard, ScoreboardProps};
     use crate::models::Position;
+    use yew::prelude::*;
+    use web_sys::{HtmlElement, Element};
+    use wasm_bindgen::JsCast;
 
-    wasm_bindgen_test_configure!(run_in_browser);
+    #[function_component(TestApp)]
+    fn test_app(props: &ScoreboardProps) -> Html {
+        html! {
+            <Scoreboard
+                score={props.score}
+                lives={props.lives}
+                restart_timer={props.restart_timer}
+                game_over={props.game_over}
+            />
+        }
+    }
 
-    #[wasm_bindgen_test]
+    fn render_component(props: ScoreboardProps) -> HtmlElement {
+        let document = gloo::utils::document();
+        let container: Element = document
+            .create_element("div")
+            .unwrap();
+        
+        document.body().unwrap().append_child(&container).unwrap();
+        
+        yew::Renderer::<TestApp>::with_root_and_props(container.clone(), props).render();
+        container.dyn_into::<HtmlElement>().unwrap()
+    }
+
+    #[test]
     fn test_cell_props_creation() {
         let props = CellProps {
             cell_type: 2,
@@ -24,7 +49,7 @@ mod tests {
         assert!(!props.is_invincible);
     }
 
-    #[wasm_bindgen_test]
+    #[test]
     fn test_game_board_props_creation() {
         let props = GameBoardProps {
             score: 100,
@@ -44,6 +69,6 @@ mod tests {
         assert_eq!(props.pacman_pos.y, 0);
         assert!(props.ghosts.is_empty());
         assert!(!props.is_dying);
-        assert!(!props.is_invincible)
+        assert!(!props.is_invincible);
     }
 }

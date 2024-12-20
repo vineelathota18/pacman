@@ -9,7 +9,7 @@ pub struct Ghost {
 impl Ghost {
     pub fn get_possible_moves(&self, maze: &Vec<Vec<u8>>) -> Vec<Position> {
         let mut moves = Vec::new();
-        let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]; // Up, Down, Left, Right
+        let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]; 
         
         for (dx, dy) in directions.iter() {
             let new_x = self.position.x as i32 + dx;
