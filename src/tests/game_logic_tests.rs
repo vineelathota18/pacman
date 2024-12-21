@@ -3,7 +3,6 @@ mod game_logic_tests {
     use crate::controls::get_direction_from_key;
     use crate::game_logic::*;
     use crate::models::{Direction, Ghost, Position};
-    use std::cell::RefCell;
 
     fn simulate_move(
         direction: &Direction,

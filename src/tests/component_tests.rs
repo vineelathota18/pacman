@@ -4,8 +4,6 @@ mod tests {
     use crate::components::game_board::GameBoardProps;
     use crate::components::scoreboard::{Scoreboard, ScoreboardProps};
     use crate::models::Position;
-    use wasm_bindgen::JsCast;
-    use web_sys::{Element, HtmlElement};
     use yew::prelude::*;
 
     #[function_component(TestApp)]
@@ -16,18 +14,12 @@ mod tests {
                 lives={props.lives}
                 restart_timer={props.restart_timer}
                 game_over={props.game_over}
+                game_won={props.game_won}
+                game_started={props.game_started}
+                on_restart={props.on_restart.clone()}
+                on_start={props.on_start.clone()}
             />
         }
-    }
-
-    fn render_component(props: ScoreboardProps) -> HtmlElement {
-        let document = gloo::utils::document();
-        let container: Element = document.create_element("div").unwrap();
-
-        document.body().unwrap().append_child(&container).unwrap();
-
-        yew::Renderer::<TestApp>::with_root_and_props(container.clone(), props).render();
-        container.dyn_into::<HtmlElement>().unwrap()
     }
 
     #[test]
@@ -38,6 +30,7 @@ mod tests {
             ghost: None,
             is_dying: false,
             is_invincible: false,
+            custom_style:None,
         };
 
         assert_eq!(props.cell_type, 2);
