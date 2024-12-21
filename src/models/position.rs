@@ -4,8 +4,3 @@ pub struct Position {
     pub y: usize,
 }
 
-// #[derive(Debug, Clone)]
-// pub struct Ghost {
-//     pub position: Position,
-//     pub color: &'static str,
-// }

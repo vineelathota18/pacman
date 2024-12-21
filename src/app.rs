@@ -1,17 +1,16 @@
-use crate::components::game_board::GameBoard;
-use crate::components::scoreboard::Scoreboard;
-use crate::constants::maze::INITIAL_MAZE;
 use crate::controls;
 use crate::game_logic;
 use crate::models::Ghost;
+use crate::components::game_board::GameBoard;
+use crate::components::scoreboard::Scoreboard;
+use crate::constants::maze::INITIAL_MAZE;
 use crate::models::{Direction, Position};
-use gloo::timers::callback::{Interval, Timeout};
 use yew::prelude::*;
 use yew_hooks::use_counter;
+use gloo::timers::callback::{Interval, Timeout};
 
 #[function_component]
 pub fn App() -> Html {
-    // State initialization
     let maze = use_state(|| {
         INITIAL_MAZE
             .iter()
@@ -95,7 +94,6 @@ pub fn App() -> Html {
         })
     };
 
-    // Game loop effect
     {
         let (
             pacman_pos,
@@ -191,7 +189,6 @@ pub fn App() -> Html {
         });
     }
 
-    // Keyboard controls effect
     {
         let current_direction = current_direction.clone();
         use_effect(move || {

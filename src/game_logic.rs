@@ -13,22 +13,19 @@ pub fn find_ghost_move(
         return None;
     }
 
-    // Randomly decide between best and worst move
     let mut rng = rand::thread_rng();
     let make_best_move = if aggressive {
         true
     } else {
-        rng.gen_bool(0.7) // 70% chance to make best move
+        rng.gen_bool(0.7) 
     };
 
-    // Find the move that gets us closest to or furthest from Pacman
     find_best_move(&possible_moves, pacman_pos, make_best_move)
 }
 
-/// Calculate valid moves for ghosts based on the maze layout
 pub fn get_valid_ghost_moves(position: &Position, maze: &[Vec<u8>]) -> Vec<Position> {
     let mut moves = Vec::new();
-    let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]; // Up, Down, Left, Right
+    let directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]; 
 
     for (dx, dy) in directions.iter() {
         let new_x = position.x as i32 + dx;
@@ -49,7 +46,6 @@ pub fn get_valid_ghost_moves(position: &Position, maze: &[Vec<u8>]) -> Vec<Posit
     moves
 }
 
-/// Find the best move for a ghost to reach Pacman
 fn find_best_move(
     possible_moves: &[Position],
     pacman_pos: &Position,
@@ -70,7 +66,6 @@ fn find_best_move(
         .cloned()
 }
 
-/// Calculate the next position for Pacman based on current direction
 pub fn calculate_next_position(
     current_direction: &Direction,
     current_pos: &Position,
@@ -103,8 +98,6 @@ pub fn calculate_next_position(
     }
 }
 
-// Update game score based on collected items
-// Returns true if power pellet was eaten
 pub fn update_score(pos: &Position, maze: &mut [Vec<u8>], score: &mut i32) -> bool {
     match maze[pos.y][pos.x] {
         2 => {
@@ -121,7 +114,6 @@ pub fn update_score(pos: &Position, maze: &mut [Vec<u8>], score: &mut i32) -> bo
     }
 }
 
-/// Check for collisions between Pacman and ghosts
 pub fn check_ghost_collision(
     pacman_pos: &Position,
     ghosts: &[Ghost],
@@ -141,12 +133,10 @@ pub fn check_ghost_collision(
     false
 }
 
-/// Move ghosts towards Pacman
 pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]) {
     let mut rng = rand::thread_rng();
 
     for ghost in ghosts.iter_mut() {
-        // Each ghost has a different personality
         let aggressive = match ghost.color {
             "#FF0000" => true,
             "#00FFFF" => rng.gen_bool(0.4),

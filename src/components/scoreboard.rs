@@ -37,7 +37,7 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
                     html! {
                         <div class="message">{"Get Ready!"}</div>
                     }
-                } else if props.game_won {  // Add victory message
+                } else if props.game_won {  
                     html! {
                         <>
                             <div class="victory">{"Victory!"}</div>
