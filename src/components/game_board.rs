@@ -33,6 +33,11 @@ pub fn GameBoard(props: &GameBoardProps) -> Html {
                         let ghost = props.ghosts.iter()
                             .find(|g| g.position.x == x && g.position.y == y)
                             .cloned();
+                        let custom_style = if y >= 7 && y <=11 && x >=2 && x <= 33 && cell == 1 {
+                            Some(AttrValue::from("background: linear-gradient(45deg, #00c0ff, #00e2f9)"))
+                        } else {
+                            None
+                        };
 
                         html! {
                             <Cell
@@ -41,6 +46,7 @@ pub fn GameBoard(props: &GameBoardProps) -> Html {
                                 {ghost}
                                 is_dying={props.is_dying && is_pacman}
                                 is_invincible={props.is_invincible}
+                                custom_style={custom_style}
                             />
                         }
                     }).collect::<Html>()

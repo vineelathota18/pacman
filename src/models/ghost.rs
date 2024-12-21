@@ -1,5 +1,4 @@
 use super::Position;
-use rand::Rng;
 
 #[derive(Clone, PartialEq)]
 pub struct Ghost {

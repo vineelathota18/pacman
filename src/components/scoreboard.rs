@@ -16,18 +16,6 @@ pub struct ScoreboardProps {
 pub fn Scoreboard(props: &ScoreboardProps) -> Html {
     let onclick_restart = props.on_restart.clone();
     let onclick_start = props.on_start.clone();
-    // let onclick_start = {
-    //     let on_start = props.on_start.clone();
-    //     Callback::from(move |e: MouseEvent| {
-    //         on_start.emit(());
-    //     })
-    // };
-    // let onclick = {
-    //     let on_restart = props.on_restart.clone();
-    //     Callback::from(move |_: MouseEvent| {
-    //         on_restart.emit(());
-    //     })
-    // };
 
     html! {
         <div class="game-info">

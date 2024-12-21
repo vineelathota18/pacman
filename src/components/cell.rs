@@ -8,6 +8,7 @@ pub struct CellProps {
     pub ghost: Option<Ghost>,
     pub is_dying: bool,
     pub is_invincible: bool,
+    pub custom_style: Option<AttrValue>,
 }
 
 #[function_component]
@@ -58,7 +59,7 @@ pub fn Cell(props: &CellProps) -> Html {
     };
 
     html! {
-        <div class={class}>
+        <div class={class} style={props.custom_style.clone()}>
             {content}
         </div>
     }

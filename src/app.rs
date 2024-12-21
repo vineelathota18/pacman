@@ -34,7 +34,7 @@ pub fn App() -> Html {
 
     let start_game = {
         let game_started = game_started.clone();
-        Callback::from(move |_: MouseEvent| {  // Specify MouseEvent type
+        Callback::from(move |_: MouseEvent| {  
             game_started.set(true);
         })
     };
@@ -81,7 +81,7 @@ pub fn App() -> Html {
         let ghosts = ghosts.clone();
         let is_invincible = is_invincible.clone();
         let restart_timer = restart_timer.clone();
-        let game_won: UseStateHandle<bool> = use_state(|| false);
+        let game_won: UseStateHandle<bool> = game_won.clone();
         let game_started = game_started.clone();
 
         Callback::from(move |_: MouseEvent| {
@@ -188,7 +188,7 @@ pub fn App() -> Html {
                     if power_pellet_eaten {
                         invincibility.increase();
                         let invincibility_clone = invincibility.clone();
-                        Timeout::new(500000, move || {
+                        Timeout::new(5000, move || {
                             invincibility_clone.decrease();
                         })
                         .forget();
