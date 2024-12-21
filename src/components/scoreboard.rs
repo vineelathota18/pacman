@@ -1,3 +1,4 @@
+use web_sys::MouseEvent;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
@@ -7,17 +8,26 @@ pub struct ScoreboardProps {
     pub restart_timer: bool,
     pub game_over: bool,
     pub game_won: bool,
-    pub on_restart: Callback<()>,
-}
+    pub game_started: bool,
+    pub on_restart: Callback<MouseEvent>,  
+    pub on_start: Callback<MouseEvent>,}
 
 #[function_component]
 pub fn Scoreboard(props: &ScoreboardProps) -> Html {
-    let onclick = {
-        let on_restart = props.on_restart.clone();
-        Callback::from(move |_: MouseEvent| {
-            on_restart.emit(());
-        })
-    };
+    let onclick_restart = props.on_restart.clone();
+    let onclick_start = props.on_start.clone();
+    // let onclick_start = {
+    //     let on_start = props.on_start.clone();
+    //     Callback::from(move |e: MouseEvent| {
+    //         on_start.emit(());
+    //     })
+    // };
+    // let onclick = {
+    //     let on_restart = props.on_restart.clone();
+    //     Callback::from(move |_: MouseEvent| {
+    //         on_restart.emit(());
+    //     })
+    // };
 
     html! {
         <div class="game-info">
@@ -33,7 +43,13 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
                 </div>
             </div>
             {
-                if props.restart_timer {
+                if !props.game_started {
+                    html! {
+                        <button onclick={onclick_start} class="start-button">
+                            {"Start Game"}
+                        </button>
+                    }
+                } else if props.restart_timer {
                     html! {
                         <div class="message">{"Get Ready!"}</div>
                     }
@@ -41,7 +57,7 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
                     html! {
                         <>
                             <div class="victory">{"Victory!"}</div>
-                            <button {onclick} class="restart-button">
+                            <button onclick={onclick_restart} class="restart-button">
                                 {"Play Again"}
                             </button>
                         </>
@@ -50,7 +66,7 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
                     html! {
                         <>
                             <div class="game-over">{"Game Over!"}</div>
-                            <button {onclick} class="restart-button">
+                            <button onclick={onclick_restart} class="restart-button">
                                 {"Restart Game"}
                             </button>
                         </>

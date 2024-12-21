@@ -121,6 +121,33 @@
 .pacman.dying .pacman-body {
     animation: die-spin 1s ease-in-out forwards !important;
 }
+.start-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 15px 30px;
+    font-size: 32px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 100;
+    animation: pulse 1.5s infinite;
+}
+
+.start-button:hover {
+    background-color: #45a049;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
 
 @keyframes die {
     0% {

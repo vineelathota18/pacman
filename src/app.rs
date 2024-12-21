@@ -17,7 +17,7 @@ pub fn App() -> Html {
             .map(|row| row.to_vec())
             .collect::<Vec<_>>()
     });
-    let pacman_pos = use_state(|| Position { x: 1, y: 1 });
+    let pacman_pos = use_state(|| Position { x: 7, y: 6 });
     let score = use_state(|| 0);
     let is_dying = use_state(|| false);
     let current_direction = use_state(|| Direction::None);
@@ -30,6 +30,14 @@ pub fn App() -> Html {
     let ghosts = use_state(|| (*initial_ghost_positions).clone());
     let invincibility = use_counter(0);
     let game_won: UseStateHandle<bool> = use_state(|| false);
+    let game_started = use_state(|| false);
+
+    let start_game = {
+        let game_started = game_started.clone();
+        Callback::from(move |_: MouseEvent| {  // Specify MouseEvent type
+            game_started.set(true);
+        })
+    };
 
     let reset_positions = {
         let pacman_pos = pacman_pos.clone();
@@ -40,16 +48,19 @@ pub fn App() -> Html {
         let restart_timer = restart_timer.clone();
         let lives = lives.clone();
         let game_over = game_over.clone();
+        let game_started = game_started.clone();
+
 
         move || {
             if *lives > 1 {
                 restart_timer.set(true);
                 let timer_handle = Timeout::new(3000, move || {
-                    pacman_pos.set(Position { x: 1, y: 1 });
+                    pacman_pos.set(Position { x: 7, y: 6 });
                     ghosts.set((*initial_ghost_positions).clone());
                     is_dying.set(false);
                     current_direction.set(Direction::None);
                     restart_timer.set(false);
+                    game_started.set(true);
                 });
                 timer_handle.forget();
             } else {
@@ -71,15 +82,17 @@ pub fn App() -> Html {
         let is_invincible = is_invincible.clone();
         let restart_timer = restart_timer.clone();
         let game_won: UseStateHandle<bool> = use_state(|| false);
+        let game_started = game_started.clone();
 
-        Callback::from(move |_| {
+        Callback::from(move |_: MouseEvent| {
             maze.set(
                 INITIAL_MAZE
                     .iter()
                     .map(|row| row.to_vec())
                     .collect::<Vec<_>>(),
             );
-            pacman_pos.set(Position { x: 1, y: 1 });
+            game_started.set(true);
+            pacman_pos.set(Position { x: 7, y: 6 });
             score.set(0);
             is_dying.set(false);
             current_direction.set(Direction::None);
@@ -108,6 +121,7 @@ pub fn App() -> Html {
             restart_timer,
             invincibility,
             game_won,
+            game_started
         ) = (
             pacman_pos.clone(),
             current_direction.clone(),
@@ -121,11 +135,12 @@ pub fn App() -> Html {
             restart_timer.clone(),
             invincibility.clone(),
             game_won.clone(),
+            game_started.clone(),
         );
 
         use_effect(move || {
             let interval = Interval::new(150, move || {
-                if *game_over || *is_dying || *restart_timer {
+                if !*game_started || *game_over || *is_dying || *restart_timer {
                     return;
                 }
 
@@ -173,7 +188,7 @@ pub fn App() -> Html {
                     if power_pellet_eaten {
                         invincibility.increase();
                         let invincibility_clone = invincibility.clone();
-                        Timeout::new(5000, move || {
+                        Timeout::new(500000, move || {
                             invincibility_clone.decrease();
                         })
                         .forget();
@@ -206,6 +221,8 @@ pub fn App() -> Html {
                 game_over={*game_over}
                 on_restart={restart_game.clone()}
                 game_won={*game_won}
+                game_started={*game_started}
+                on_start={start_game.clone()}
             />
             <GameBoard
                 score={*score}
