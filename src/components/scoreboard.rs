@@ -6,6 +6,7 @@ pub struct ScoreboardProps {
     pub lives: i32,
     pub restart_timer: bool,
     pub game_over: bool,
+    pub game_won: bool,
     pub on_restart: Callback<()>,
 }
 
@@ -35,6 +36,15 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
                 if props.restart_timer {
                     html! {
                         <div class="message">{"Get Ready!"}</div>
+                    }
+                } else if props.game_won {  // Add victory message
+                    html! {
+                        <>
+                            <div class="victory">{"Victory!"}</div>
+                            <button {onclick} class="restart-button">
+                                {"Play Again"}
+                            </button>
+                        </>
                     }
                 } else if props.game_over {
                     html! {

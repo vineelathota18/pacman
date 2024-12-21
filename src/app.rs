@@ -3,6 +3,7 @@ use crate::components::scoreboard::Scoreboard;
 use crate::constants::maze::INITIAL_MAZE;
 use crate::controls;
 use crate::game_logic;
+use crate::models::Ghost;
 use crate::models::{Direction, Position};
 use gloo::timers::callback::{Interval, Timeout};
 use yew::prelude::*;
@@ -26,9 +27,10 @@ pub fn App() -> Html {
     let is_invincible = use_state(|| false);
     let lives = use_state(|| 3);
     let restart_timer = use_state(|| false);
-    let initial_ghost_positions = use_state(|| game_logic::initialize_ghosts(&maze));
+    let initial_ghost_positions = use_state(|| Ghost::initialize_ghosts(&maze));
     let ghosts = use_state(|| (*initial_ghost_positions).clone());
     let invincibility = use_counter(0);
+    let game_won: UseStateHandle<bool> = use_state(|| false);
 
     let reset_positions = {
         let pacman_pos = pacman_pos.clone();
@@ -69,6 +71,7 @@ pub fn App() -> Html {
         let ghosts = ghosts.clone();
         let is_invincible = is_invincible.clone();
         let restart_timer = restart_timer.clone();
+        let game_won: UseStateHandle<bool> = use_state(|| false);
 
         Callback::from(move |_| {
             maze.set(
@@ -86,8 +89,9 @@ pub fn App() -> Html {
             lives.set(3);
             is_invincible.set(false);
             restart_timer.set(false);
-            let initial_ghosts = game_logic::initialize_ghosts(&maze);
+            let initial_ghosts = Ghost::initialize_ghosts(&maze);
             ghosts.set(initial_ghosts);
+            game_won.set(false);
         })
     };
 
@@ -105,6 +109,7 @@ pub fn App() -> Html {
             lives,
             restart_timer,
             invincibility,
+            game_won,
         ) = (
             pacman_pos.clone(),
             current_direction.clone(),
@@ -117,6 +122,7 @@ pub fn App() -> Html {
             lives.clone(),
             restart_timer.clone(),
             invincibility.clone(),
+            game_won.clone(),
         );
 
         use_effect(move || {
@@ -152,6 +158,11 @@ pub fn App() -> Html {
                 let mut new_pos = (*pacman_pos).clone();
                 let mut maze_clone = (*maze).clone();
                 let mut current_score = *score;
+
+                if game_logic::check_game_complete(&maze_clone) {
+                    game_won.set(true);
+                    return;
+                }
 
                 if let Some((next_pos, power_pellet_eaten)) = game_logic::calculate_next_position(
                     &current_direction,
@@ -197,6 +208,7 @@ pub fn App() -> Html {
                 restart_timer={*restart_timer}
                 game_over={*game_over}
                 on_restart={restart_game.clone()}
+                game_won={*game_won}
             />
             <GameBoard
                 score={*score}

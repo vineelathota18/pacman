@@ -70,46 +70,13 @@ fn find_best_move(
         .cloned()
 }
 
-/// Initialize ghost positions in valid locations
-pub fn initialize_ghosts(maze: &[Vec<u8>]) -> Vec<Ghost> {
-    let mut rng = rand::thread_rng();
-    let ghost_colors = vec!["#FF0000", "#00FFFF", "#FFB8FF", "#FFB852"];
-    let mut valid_positions: Vec<Position> = maze
-        .iter()
-        .enumerate()
-        .flat_map(|(y, row)| {
-            row.iter().enumerate().filter_map(move |(x, &cell)| {
-                if cell != 1 && !(x == 1 && y == 1) {
-                    Some(Position { x, y })
-                } else {
-                    None
-                }
-            })
-        })
-        .collect();
-
-    ghost_colors
-        .iter()
-        .filter_map(|&color| {
-            if valid_positions.is_empty() {
-                None
-            } else {
-                let idx = rng.gen_range(0..valid_positions.len());
-                let position = valid_positions.remove(idx);
-                Some(Ghost { position, color })
-            }
-        })
-        .collect()
-}
-
 /// Calculate the next position for Pacman based on current direction
 pub fn calculate_next_position(
     current_direction: &Direction,
     current_pos: &Position,
-    maze: &mut Vec<Vec<u8>>,
+    maze: &mut [Vec<u8>],
     score: &mut i32,
 ) -> Option<(Position, bool)> {
-    // Returns position and whether power pellet was eaten
     let mut new_pos = current_pos.clone();
 
     let can_move = match current_direction {
@@ -138,7 +105,7 @@ pub fn calculate_next_position(
 
 // Update game score based on collected items
 // Returns true if power pellet was eaten
-pub fn update_score(pos: &Position, maze: &mut Vec<Vec<u8>>, score: &mut i32) -> bool {
+pub fn update_score(pos: &Position, maze: &mut [Vec<u8>], score: &mut i32) -> bool {
     match maze[pos.y][pos.x] {
         2 => {
             *score += 10;
@@ -181,15 +148,21 @@ pub fn move_ghosts(ghosts: &mut [Ghost], pacman_pos: &Position, maze: &[Vec<u8>]
     for ghost in ghosts.iter_mut() {
         // Each ghost has a different personality
         let aggressive = match ghost.color {
-            "#FF0000" => true,              // Red ghost: Always aggressive
-            "#00FFFF" => rng.gen_bool(0.4), // Cyan ghost: Mostly aggressive
-            "#FFB8FF" => rng.gen_bool(0.3), // Pink ghost: Random behavior
-            "#FFB852" => false,             // Orange ghost: Mostly passive
-            _ => rng.gen_bool(0.7),         // Default: Random behavior
+            "#FF0000" => true,
+            "#00FFFF" => rng.gen_bool(0.4),
+            "#FFB8FF" => rng.gen_bool(0.3),
+            "#FFB852" => false,
+            _ => rng.gen_bool(0.7),
         };
 
         if let Some(new_pos) = find_ghost_move(ghost, pacman_pos, maze, aggressive) {
             ghost.position = new_pos;
         }
     }
+}
+
+pub fn check_game_complete(maze: &[Vec<u8>]) -> bool {
+    !maze
+        .iter()
+        .any(|row| row.iter().any(|&cell| cell == 2 || cell == 3))
 }
