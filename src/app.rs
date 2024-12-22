@@ -147,12 +147,6 @@ pub fn App() -> Html {
                 let new_counter = *move_counter + 1;
                 move_counter.set(new_counter);
 
-                if new_counter % 2 == 0 {
-                    let mut new_ghosts = (*ghosts).clone();
-                    game_logic::move_ghosts(&mut new_ghosts, &pacman_pos, &maze);
-                    ghosts.set(new_ghosts);
-                }
-
                 if game_logic::check_ghost_collision(
                     &pacman_pos,
                     &ghosts,
@@ -166,6 +160,12 @@ pub fn App() -> Html {
                     })
                     .forget();
                     return;
+                }
+
+                if new_counter % 2 == 0 {
+                    let mut new_ghosts = (*ghosts).clone();
+                    game_logic::move_ghosts(&mut new_ghosts, &pacman_pos, &maze);
+                    ghosts.set(new_ghosts);
                 }
 
                 let mut new_pos = (*pacman_pos).clone();

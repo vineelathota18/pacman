@@ -20,7 +20,7 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
     html! {
         <div class="game-info">
             <div class="score">
-                <div>{"Score: "}{props.score}</div>
+                <div>{"Score: "}{{format!("{:05}", props.score)}}</div>
                     <div class="lives">
                         <div class="cell pacman">
                             <div class="pacman-body"></div>
@@ -33,9 +33,11 @@ pub fn Scoreboard(props: &ScoreboardProps) -> Html {
             {
                 if !props.game_started {
                     html! {
-                        <button onclick={onclick_start} class="start-button">
-                            {"Start Game"}
-                        </button>
+                        <div>
+                            <button onclick={onclick_start} class="start-button">
+                                {"Start Game"}
+                            </button>
+                        </div>
                     }
                 } else if props.restart_timer {
                     html! {

@@ -8,7 +8,7 @@ body {
   align-items: center;
   display: flex;
   justify-content: center;
-
+  flex-direction: row;
   background: linear-gradient(to bottom right, #444444, #009a5b);
   font-size: 1.5rem;
 }
