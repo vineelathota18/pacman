@@ -32,5 +32,5 @@ Filters out invalid moves (walls and out-of-bounds)
 
 #### For each valid move:
 Calculates Manhattan distance to Pacman <br/>
-Weighs move based on ghost's personality <br/>
+Weighs move based on ghost's  personality <br/>
 Applies randomization factor
